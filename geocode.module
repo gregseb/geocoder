@@ -250,7 +250,7 @@ function geocode_widget_validate_walkthrough(&$field, $form_state, $parent = NUL
       $handler = geocode_get_handler($field[$lang][0]['geocode_handler']);
       $field[$lang] = array();
       // If the sources is 'title' then pull from the title
-      if ($source == 'title' || 'name') {
+      if ($source == 'title' || $source == 'name') {
         if (isset($form_state['values'][$source])) {
           $field_object = array('type' => 'text');
           $item = array('value' => $form_state['values'][$source]);
@@ -268,7 +268,7 @@ function geocode_widget_validate_walkthrough(&$field, $form_state, $parent = NUL
         }
       }
       else {
-        $field_object = field_info_field($field[$lang][0]['geocode_source']);
+        $field_object = field_info_field($source);
         if (isset($parent)) {
           if (isset($form_state['values'][$parent][$source][$lang])) {
             foreach ($form_state['values'][$parent][$source][$lang] as $delta => $item) {
