@@ -171,6 +171,7 @@ function geocode_field_widget_settings_form($this_field, $instance) {
     '#options' => $valid_fields,
     '#description' => t('Select which field you would like to geocode from.'),
     '#required' => TRUE,
+    '#multiple' => TRUE,
     '#attributes' => array('onchange' => 'geocode_admin_handler_filter();'),
   );
 
@@ -240,67 +241,86 @@ function geocode_widget_validate($element, &$form_state) {
   }
 }
 
+/**
+ * Parse the field
+ */
+function geocode_widget_parse_field($item, $type) {
+  $return = '';
+
+  switch ($type) {
+    case 'addressfield':
+      $return = geocode_widget_parse_addressfield($item);
+      break;
+    default:
+      $return = $item['value'];
+  }
+}
+
+/**
+ * Parse and address field
+ */
+function geocode_widget_parse_addressfield($field_item) {
+  $address = '';
+  if (!empty($field_item['premise']))                 $address .= $field_item['premise'].',';
+  if (!empty($field_item['thoroughfare']))            $address .= $field_item['thoroughfare'].',';
+  if (!empty($field_item['locality']))                $address .= $field_item['locality'].',';
+  if (!empty($field_item['administrative_area']))     $address .= $field_item['administrative_area'].',';
+  if (!empty($field_item['sub_administrative_area'])) $address .= $field_item['sub_administrative_area'].',';
+  if (!empty($field_item['country']))                 $address .= $field_item['country'].',';
+  if (!empty($field_item['postal_code']))             $address .= $field_item['postal_code'].',';
+
+  return $address;
+}
 
 function geocode_widget_validate_walkthrough(&$field, $form_state, $parent = NULL) {
   if (is_array($field)) {
     $lang = isset($form_state['values']['language']) ? $form_state['values']['language'] : LANGUAGE_NONE;
     if ((!empty($field[$lang][0]['geocode_source']) && !empty($field[$lang][0]['geocode_target']) && !empty($field[$lang][0]['geocode_handler']))) {
       // We found a source/target/handler set, let's do this.
-      $source = $field[$lang][0]['geocode_source'];
-      $handler = geocode_get_handler($field[$lang][0]['geocode_handler']);
-      $field[$lang] = array();
-      // If the sources is 'title' then pull from the title
-      if ($source == 'title' || $source == 'name') {
-        if (isset($form_state['values'][$source])) {
-          $field_object = array('type' => 'text');
-          $item = array('value' => $form_state['values'][$source]);
-          try {
-            $geometry = call_user_func($handler['field_callback'],$field_object, $item);
-          }
-          catch(Exception $e) {
-            drupal_set_message($e->getMessage(),'error');
-            return;
-          }
 
-          if ($geometry) {
-            $field[$lang][0] = geofield_get_values_from_geometry($geometry);
+      // Can only have one handler
+      $handler = geocode_get_handler($field[$lang][0]['geocode_handler']);
+
+      $values = array();
+      foreach ($field[$lang][0]['geocode_source'] as $source) {
+        // If the source is a name or text, then there is only one value
+        if (($source == 'title' || $source == 'name') && isset($form_state['values'][$source])) {
+          $main = $form_state['values'][$source];
+        }
+        else {
+          // get the field info
+          $field_info = field_info_field($source);
+          if (isset($parent) && isset($form_state['values'][$parent][$source][$lang])) {
+            foreach ($form_state['values'][$parent][$source][$lang] as $delta => $item) {
+              $values[$delta][] = geocode_widget_parse_field($item, $field['type']);
+            }
+          }
+          elseif (!isset($parent) && isset($form_state['values'][$source][$lang])) {
+            foreach ($form_state['values'][$source][$lang] as $delta => $item) {
+              $values[$delta][] = geocode_widget_parse_field($item, $field['type']);
+            }
           }
         }
       }
-      else {
-        $field_object = field_info_field($source);
-        if (isset($parent)) {
-          if (isset($form_state['values'][$parent][$source][$lang])) {
-            foreach ($form_state['values'][$parent][$source][$lang] as $delta => $item) {
-              try {
-                $geometry = call_user_func($handler['field_callback'],$field_object, $item);
-              }
-              catch(Exception $e) {
-                drupal_set_message($e->getMessage(),'error');
-                return;
-              }
 
-              if ($geometry) {
-                $field[$lang][$delta] = geofield_get_values_from_geometry($geometry);
-              }
-            }
-          }
-        } else {
-          if (isset($form_state['values'][$source][$lang])) {
-            foreach ($form_state['values'][$source][$lang] as $delta => $item) {
-              try {
-                $geometry = call_user_func($handler['field_callback'],$field_object, $item);
-              }
-              catch(Exception $e) {
-                drupal_set_message($e->getMessage(),'error');
-                return;
-              }
+      // To avoid any conflicts, just make it text :)
+      $field_object = array('type' => 'text');
+      foreach ($values as $delta => $value) {
+        // Add the title to the beginning if it exists
+        if (isset($main)) {
+          $value = array_unshift($value, $main);
+        }
+        $item = array('value' => implode(' ', $value));
+        try {
+          $geometry = call_user_func($handler['field_callback'], $field_object, $item);
+        }
+        catch(Exception $e) {
+          drupal_set_message($e->getMessage(),'error');
+          return;
+        }
 
-              if ($geometry) {
-                $field[$lang][$delta] = geofield_get_values_from_geometry($geometry);
-              }
-            }
-          }
+        if ($geometry) {
+          $field[$lang][$delta] = geofield_get_values_from_geometry($geometry);
         }
       }
     }
