@@ -228,14 +228,14 @@ function geocode_widget_validate($element, &$form_state) {
 
   // Walk the form_state values, applying all instances of geocode source and target operations
   foreach ($form_state['values'] as &$field) {
-    geocode_widget_validate_walkthrough(&$field, $form_state);
+    geocode_widget_validate_walkthrough($field, $form_state);
   }
 
   if (isset($form_state['field']['#parents'])) {
     //Walk through the fields that are under parents and match up and sources and targets there
     foreach ($form_state['field']['#parents'] as $parent => $parent_data) {
       foreach ($form_state['values'][$parent] as &$field) {
-        geocode_widget_validate_walkthrough(&$field, $form_state, $parent);
+        geocode_widget_validate_walkthrough($field, $form_state, $parent);
       }
     }
   }
@@ -254,6 +254,8 @@ function geocode_widget_parse_field($item, $type) {
     default:
       $return = $item['value'];
   }
+
+  return $return;
 }
 
 /**
@@ -292,12 +294,12 @@ function geocode_widget_validate_walkthrough(&$field, $form_state, $parent = NUL
           $field_info = field_info_field($source);
           if (isset($parent) && isset($form_state['values'][$parent][$source][$lang])) {
             foreach ($form_state['values'][$parent][$source][$lang] as $delta => $item) {
-              $values[$delta][] = geocode_widget_parse_field($item, $field['type']);
+              $values[$delta][] = geocode_widget_parse_field($item, $field_info['type']);
             }
           }
           elseif (!isset($parent) && isset($form_state['values'][$source][$lang])) {
             foreach ($form_state['values'][$source][$lang] as $delta => $item) {
-              $values[$delta][] = geocode_widget_parse_field($item, $field['type']);
+              $values[$delta][] = geocode_widget_parse_field($item, $field_info['type']);
             }
           }
         }
