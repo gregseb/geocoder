@@ -307,7 +307,7 @@ function geocode_widget_validate_walkthrough(&$field, $form_state, $parent = NUL
 
       // To avoid any conflicts, just make it text :)
       $field_object = array('type' => 'text');
-      if (isset($main) && empty($values)) {
+      if (isset($main) && empty($values) && $main !== 'none') {
         $item = array('value' => $main);
         try {
           $geometry = call_user_func($handler['field_callback'], $field_object, $item);
@@ -324,21 +324,23 @@ function geocode_widget_validate_walkthrough(&$field, $form_state, $parent = NUL
       }
       else {
         foreach ($values as $delta => $value) {
-          // Add the title to the beginning if it exists
-          if (isset($main)) {
-            $value = array_unshift($value, $main);
-          }
-          $item = array('value' => implode(' ', $value));
-          try {
-            $geometry = call_user_func($handler['field_callback'], $field_object, $item);
-          }
-          catch(Exception $e) {
-            drupal_set_message($e->getMessage(),'error');
-            return;
-          }
+          if ($value !== 'none') {
+            // Add the title to the beginning if it exists
+            if (isset($main)) {
+              $value = array_unshift($value, $main);
+            }
+            $item = array('value' => implode(' ', $value));
+            try {
+              $geometry = call_user_func($handler['field_callback'], $field_object, $item);
+            }
+            catch(Exception $e) {
+              drupal_set_message($e->getMessage(),'error');
+              return;
+            }
 
-          if ($geometry) {
-            $field[$lang][$delta] = geofield_get_values_from_geometry($geometry);
+            if ($geometry) {
+              $field[$lang][$delta] = geofield_get_values_from_geometry($geometry);
+            }
           }
         }
       }
