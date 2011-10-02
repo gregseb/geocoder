@@ -251,6 +251,10 @@ function geocoder_widget_parse_field($item, $type) {
     case 'addressfield':
       $return = geocoder_widget_parse_addressfield($item);
       break;
+    case 'image':
+    case 'file':
+      $return = $item['fid'];
+      break;
     default:
       $return = $item['value'];
   }
@@ -276,7 +280,12 @@ function geocoder_widget_parse_addressfield($field_item) {
 
 function geocoder_widget_validate_walkthrough(&$field, $form_state, $parent = NULL) {
   if (is_array($field)) {
+    // Set the language based on the form state.
     $lang = isset($form_state['values']['language']) ? $form_state['values']['language'] : LANGUAGE_NONE;
+    
+    // If default language is set but content isnt translatable it is still 'und' on the fields. 
+    if (!isset($field[$lang])) $lang = LANGUAGE_NONE;
+    
     if ((!empty($field[$lang][0]['geocoder_source']) && !empty($field[$lang][0]['geocoder_target']) && !empty($field[$lang][0]['geocoder_handler']))) {
       // We found a source/target/handler set, let's do this.
 

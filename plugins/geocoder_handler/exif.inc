@@ -24,10 +24,8 @@ function geocoder_exif($filepath) {
 }
 
 function geocoder_exif_field($field, $field_item) {
-	if ($field['type'] == 'file' || $field['type'] == 'image') {
-	  $file = file_load($field_item['fid']);
-	  return geocoder_exif($file->uri);
-  }
+  $file = file_load($field_item['value']);
+  return geocoder_exif($file->uri);
 }
 
 function geocoder_exif_from($dir, $data) {
