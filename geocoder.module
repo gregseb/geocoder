@@ -308,7 +308,7 @@ function geocoder_widget_validate_walkthrough(&$field, $form_state, $parent = NU
     // If default language is set but content isnt translatable it is still 'und' on the fields.
     if (!isset($field[$lang])) $lang = LANGUAGE_NONE;
 
-    if ((!empty($field[$lang][0]['geocoder_source']) && !empty($field[$lang][0]['geocoder_target']) && !empty($field[$lang][0]['geocoder_handler']))) {
+    if (!empty($field[$lang][0]) && is_array($field[$lang][0]) && (!empty($field[$lang][0]['geocoder_source']) && !empty($field[$lang][0]['geocoder_target']) && !empty($field[$lang][0]['geocoder_handler']))) {
       // We found a source/target/handler set, let's do this.
 
       // Can only have one handler
