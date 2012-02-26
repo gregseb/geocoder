@@ -11,8 +11,8 @@
  * by the system that includes this file.
  */
 $plugin = array(
-  'title' => t("WKT Geocoder"),
-  'description' => t('Get the geomtry of a WKT string'),
+  'title' => t("WKT"),
+  'description' => t('Get the geometry of a WKT string'),
   'callback' => 'geocoder_wkt',
   'field_types' => array('text','text_long','file','geofield','computed'),
   'field_callback' => 'geocoder_wkt_field',
