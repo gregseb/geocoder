@@ -312,64 +312,6 @@ function geocoder_field_attach_presave($entity_type, $entity) {
   }
 }
 
-function geocoder_widget_validatea(&$element, &$form_state) {
-  $target_name = $element['#field_name'];
-  
-  // Load the handler
-  $handler = geocoder_get_handler($element['#geocoder_handler']);
-
-  // Set the language based on the form state.
-  $lang = isset($form_state['values']['language']) ? $form_state['values']['language'] : LANGUAGE_NONE;
-  
-  // Grab the source-field and load information about it
-  $source_field = $element['#geocoder_source'];
-  $field_info = field_info_field($source_field);
-  
-  // Double check the language on the source-field as it may not be translatable
-  if (!isset($form_state['values'][$source_field][$lang])) $lang = LANGUAGE_NONE;
-  
-  // For each delta in the source field try to load a geometry
-  $geometries = array();
-  foreach ($form_state['values'][$source_field][$lang] as $delta => $item) {
-    try {
-      $geom = call_user_func($handler['field_callback'], $field_info, $item);
-      if ($geom) $geometries[] = $geom;
-    }
-    catch(Exception $e) {
-      drupal_set_message($e->getMessage(),'error');
-    }
-  }
-      
-  // Now we have our geometries, set the values depending on the delta-handling
-  $values = array();
-  
-  // Default delta handling: just pass one delta to the next
-  if ($element['#geocoder_delta'] == 'default') {
-    foreach ($geometries as $geometry) {
-      $values[] = array('wkt' => $geometry->out('wkt'));
-    }
-  }
-  
-  // Single-to-multiple handling - if we can, explode out the component geometries
-  if ($element['#geocoder_delta'] == 's_to_m') {
-    $type = $geometries[0]->geometryType();
-    if (in_array($type, array('MultiPoint','MultiLineString','MultiPolygon','GeometryCollection'))) {
-      $components = $geometries[0]->getComponents();
-      foreach ($components as $component) {
-        $values[] = array('wkt' => $component->out('wkt'));
-      }
-    }
-    else {
-      $values[] = array('wkt' => $geometries[0]->out('wkt'));
-    }
-  }
-  
-
-  
-  // Set the values in the form
-  form_set_value($element, $values, $form_state); 
-}
-
 /**
  * Helper Function: Parse and address field
  */
