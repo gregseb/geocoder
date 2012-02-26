@@ -234,21 +234,85 @@ function geocoder_field_widget_settings_form_callback($form, $form_state) {
 }
 
 /**
- * Implements hook_field_widget_form().
+ * Implements hook_field_attach_presave().
+ *
+ * Geocoding for the geocoder widget is done here to ensure that only validated
+ * and fully processed fields values are accessed.
  */
-function geocoder_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
-  $element['#type'] ='hidden';
-  $element['#geocoder_target']  = $instance['field_name'];
-  $element['#geocoder_source']  = isset($instance['widget']['settings']['geocoder_field']) ? $instance['widget']['settings']['geocoder_field'] : '';
-  $element['#geocoder_handler'] = isset($instance['widget']['settings']['geocoder_handler']) ? $instance['widget']['settings']['geocoder_handler'] : '';
-  $element['#geocoder_delta']   = isset($instance['widget']['settings']['delta_handling']) ? $instance['widget']['settings']['delta_handling'] : 'default';
-  $element['#element_validate'] = array('geocoder_widget_validate');
-  
-  return $element;
+function geocoder_field_attach_presave($entity_type, $entity) {
+  // Loop over any geofield using our geocode widget
+  $entity_info = entity_get_info($entity_type);
+  $bundle_name = empty($entity_info['entity keys']['bundle']) ? $entity_type : $entity->{$entity_info['entity keys']['bundle']};
+  foreach (field_info_instances($entity_type, $bundle_name) as $field_instance) {
+    if ($field_instance['widget']['type'] === 'geocoder') {
+      // Required settings
+      if (isset($field_instance['widget']['settings']['geocoder_handler']) && isset($field_instance['widget']['settings']['geocoder_field'])) {
+        $handler = geocoder_get_handler($field_instance['widget']['settings']['geocoder_handler']);
+        $field_name = is_array($field_instance['widget']['settings']['geocoder_field']) ? reset($field_instance['widget']['settings']['geocoder_field']) : $field_instance['widget']['settings']['geocoder_field'];
+        $field_info = field_info_field($field_name);
+        
+        // Get values for the data to be geocoded.
+        $langcode = field_language($entity_type, $entity, $field_name);
+        $items = field_get_items($entity_type, $entity, $field_name, $langcode);
+        if (count($items)) {
+          $values = array();
+          
+          // Geocode geometries
+          $geometries = array();
+          foreach ($items as $delta => $item) {
+            // Geocode any value from our source field.
+            try {
+              $geometry = call_user_func($handler['field_callback'], $field_info, $item);
+              if ($geometry instanceof Geometry) $geometries[] = $geometry;
+            }
+            catch (Exception $e) {
+              drupal_set_message($e->getMessage(), 'error');
+            }
+          }
+          
+          if (empty($geometries)) $values = array(NULL);
+          else {
+            // Determine how we deal with deltas (multi-value fields)
+            $delta_handling = $field_instance['widget']['settings']['delta_handling'];
+            if (!$delta_handling) $delta_handling = 'default';
+            
+            // Default delta handling: just pass one delta to the next
+            if ($delta_handling == 'default') {
+              foreach ($geometries as $geometry) {
+                $values[] = geofield_get_values_from_geometry($geometry);
+              }
+            }
+            
+            // Single-to-multiple handling - if we can, explode out the component geometries
+            if ($delta_handling == 's_to_m') {
+              $type = $geometries[0]->geometryType();
+              if (in_array($type, array('MultiPoint','MultiLineString','MultiPolygon','GeometryCollection'))) {
+                $components = $geometries[0]->getComponents();
+                foreach ($components as $component) {
+                  $values[] = geofield_get_values_from_geometry($component);
+                }
+              }
+              else {
+                $values[] = geofield_get_values_from_geometry($geometries[0]);
+              }
+            }
+            
+            // For multiple-to-single handling, run it though geometryReduce
+             if ($delta_handling == 'm_to_s') {
+              $reduced_geom = geoPHP::geometryReduce($geometries);
+              $values[] = geofield_get_values_from_geometry($reduced_geom);
+            }
+          }
+          
+          // Set the values
+          $entity->{$field_instance['field_name']}[$langcode] = $values;
+        }
+      }
+    }
+  }
 }
 
-
-function geocoder_widget_validate(&$element, &$form_state) {
+function geocoder_widget_validatea(&$element, &$form_state) {
   $target_name = $element['#field_name'];
   
   // Load the handler
@@ -300,11 +364,7 @@ function geocoder_widget_validate(&$element, &$form_state) {
     }
   }
   
-  // For multiple-to-single handling, run it though geometryReduce
-  if ($element['#geocoder_delta'] == 'm_to_s') {
-    $reduced_geom = geoPHP::geometryReduce($geometries);
-    $values[] = array('wkt' => $reduced_geom->out('wkt'));
-  }
+
   
   // Set the values in the form
   form_set_value($element, $values, $form_state); 
