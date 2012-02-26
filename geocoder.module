@@ -304,8 +304,8 @@ function geocoder_field_attach_presave($entity_type, $entity) {
             }
           }
           
-          // Set the values
-          $entity->{$field_instance['field_name']}[$langcode] = $values;
+          // Set the values - geofields do not support languages
+          $entity->{$field_instance['field_name']}[LANGUAGE_NONE] = $values;
         }
       }
     }
