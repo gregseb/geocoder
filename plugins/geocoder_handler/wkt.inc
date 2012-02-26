@@ -34,8 +34,10 @@ function geocoder_wkt_field($field, $field_item) {
 		return geocoder_wkt($field_item['wkt']);
 	}
   if ($field['type'] == 'file') {
-  	$file = file_load($field_item['fid']);
-  	$wkt = file_get_contents($file->uri);
-  	return geocoder_wkt($wkt);
+    if ($field_item['fid']) {
+  	  $file = file_load($field_item['fid']);
+  	  $wkt = file_get_contents($file->uri);
+  	  return geocoder_wkt($wkt);
+  	}
   }
 }

@@ -31,8 +31,10 @@ function geocoder_json_field($field, $field_item) {
   	return geocoder_json($field_item['value']);
   }
   if ($field['type'] == 'file') {
-  	$file = file_load($field_item['fid']);
-  	$json = file_get_contents($file->uri);
-  	return geocoder_json($json);
+    if ($field_item['fid']) {
+  	  $file = file_load($field_item['fid']);
+  	  $json = file_get_contents($file->uri);
+  	  return geocoder_json($json);
+  	}
   }
 }

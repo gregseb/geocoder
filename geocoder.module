@@ -131,6 +131,10 @@ function geocoder_field_widget_info() {
     'geocoder' => array(
       'label' => t('Geocode from another field'),
       'field types' => array('geofield'),
+      'behaviors' => array(
+        'multiple values' => FIELD_BEHAVIOR_CUSTOM,
+        'default value' => FIELD_BEHAVIOR_NONE,
+      ),
     ),
   );
 }
@@ -193,7 +197,6 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#options' => $valid_fields,
     '#description' => t('Select which field you would like to geocode from.'),
     '#required' => TRUE,
-    '#multiple' => TRUE,
     '#attributes' => array('onchange' => 'geocoder_admin_handler_filter();'),
   );
 
@@ -205,6 +208,18 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#default_value' => isset($settings['geocoder_handler']) ? $settings['geocoder_handler']: '',
     '#options' => $available_handlers,
     '#description' => t('Select which type of geocoding handler you would like to use'),
+    '#required' => TRUE,
+  );
+
+  $form['delta_handling'] = array(
+    '#type' => 'select',
+    '#title' => t('Multi-value field handling'),
+    '#default_value' => isset($settings['delta_handling']) ? $settings['delta_handling']: 'default',
+    '#options' => array(
+      'default' => 'Match Deltas (default)',
+      's_to_m' =>  'Single-value to Multi-value',
+      'm_to_s' =>  'Multi-value to Single-value',
+    ),
     '#required' => TRUE,
   );
 
@@ -221,71 +236,82 @@ function geocoder_field_widget_settings_form_callback($form, $form_state) {
 /**
  * Implements hook_field_widget_form().
  */
-function geocoder_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $base) {
-  $element = $base;
-
-  $element['wkt'] = array(
-   '#type' => 'hidden',
-   '#element_validate' => array('geocoder_widget_validate'),
-  );
-  $element['geocoder_target'] = array(
-   '#type' => 'hidden',
-   '#value' => $instance['field_name'],
-  );
-  $element['geocoder_source'] = array(
-   '#type' => 'hidden',
-   '#value' => isset($instance['widget']['settings']['geocoder_field']) ? $instance['widget']['settings']['geocoder_field'] : '',
-  );
-  $element['geocoder_handler'] = array(
-   '#type' => 'hidden',
-   '#value' => isset($instance['widget']['settings']['geocoder_handler']) ? $instance['widget']['settings']['geocoder_handler'] : '',
-  );
-
+function geocoder_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $element['#type'] ='hidden';
+  $element['#geocoder_target']  = $instance['field_name'];
+  $element['#geocoder_source']  = isset($instance['widget']['settings']['geocoder_field']) ? $instance['widget']['settings']['geocoder_field'] : '';
+  $element['#geocoder_handler'] = isset($instance['widget']['settings']['geocoder_handler']) ? $instance['widget']['settings']['geocoder_handler'] : '';
+  $element['#geocoder_delta']   = isset($instance['widget']['settings']['delta_handling']) ? $instance['widget']['settings']['delta_handling'] : 'default';
+  $element['#element_validate'] = array('geocoder_widget_validate');
+  
   return $element;
 }
 
 
-function geocoder_widget_validate($element, &$form_state) {
-  // To validate, we simply run through the form fields, looking for items with geocoder_source and geocoder_target properties
+function geocoder_widget_validate(&$element, &$form_state) {
+  $target_name = $element['#field_name'];
+  
+  // Load the handler
+  $handler = geocoder_get_handler($element['#geocoder_handler']);
 
-  // Walk the form_state values, applying all instances of geocoder source and target operations
-  foreach ($form_state['values'] as &$field) {
-    geocoder_widget_validate_walkthrough($field, $form_state);
-  }
-
-  if (isset($form_state['field']['#parents'])) {
-    //Walk through the fields that are under parents and match up and sources and targets there
-    foreach ($form_state['field']['#parents'] as $parent => $parent_data) {
-      foreach ($form_state['values'][$parent] as &$field) {
-        geocoder_widget_validate_walkthrough($field, $form_state, $parent);
-      }
+  // Set the language based on the form state.
+  $lang = isset($form_state['values']['language']) ? $form_state['values']['language'] : LANGUAGE_NONE;
+  
+  // Grab the source-field and load information about it
+  $source_field = $element['#geocoder_source'];
+  $field_info = field_info_field($source_field);
+  
+  // Double check the language on the source-field as it may not be translatable
+  if (!isset($form_state['values'][$source_field][$lang])) $lang = LANGUAGE_NONE;
+  
+  // For each delta in the source field try to load a geometry
+  $geometries = array();
+  foreach ($form_state['values'][$source_field][$lang] as $delta => $item) {
+    try {
+      $geom = call_user_func($handler['field_callback'], $field_info, $item);
+      if ($geom) $geometries[] = $geom;
+    }
+    catch(Exception $e) {
+      drupal_set_message($e->getMessage(),'error');
     }
   }
-}
-
-/**
- * Parse the field
- */
-function geocoder_widget_parse_field($item, $type) {
-  $return = '';
-
-  switch ($type) {
-    case 'addressfield':
-      $return = geocoder_widget_parse_addressfield($item);
-      break;
-    case 'image':
-    case 'file':
-      $return = $item['fid'];
-      break;
-    default:
-      $return = $item['value'];
+      
+  // Now we have our geometries, set the values depending on the delta-handling
+  $values = array();
+  
+  // Default delta handling: just pass one delta to the next
+  if ($element['#geocoder_delta'] == 'default') {
+    foreach ($geometries as $geometry) {
+      $values[] = array('wkt' => $geometry->out('wkt'));
+    }
   }
-
-  return $return;
+  
+  // Single-to-multiple handling - if we can, explode out the component geometries
+  if ($element['#geocoder_delta'] == 's_to_m') {
+    $type = $geometries[0]->geometryType();
+    if (in_array($type, array('MultiPoint','MultiLineString','MultiPolygon','GeometryCollection'))) {
+      $components = $geometries[0]->getComponents();
+      foreach ($components as $component) {
+        $values[] = array('wkt' => $component->out('wkt'));
+      }
+    }
+    else {
+      $values[] = array('wkt' => $geometries[0]->out('wkt'));
+    }
+  }
+  
+  // For multiple-to-single handling, run it though geometryReduce
+  if ($element['#geocoder_delta'] == 'm_to_s') {
+    $reduced_geom = geoPHP::geometryReduce($geometries);
+    $values[] = array('wkt' => $reduced_geom->out('wkt'));
+  }
+  
+  // Set the values in the form
+  form_set_value($element, $values, $form_state); 
 }
 
 /**
- * Parse and address field
+ * Helper Function: Parse and address field
  */
 function geocoder_widget_parse_addressfield($field_item) {
   $address = '';
@@ -296,78 +322,9 @@ function geocoder_widget_parse_addressfield($field_item) {
   if (!empty($field_item['sub_administrative_area'])) $address .= $field_item['sub_administrative_area'].',';
   if (!empty($field_item['country']))                 $address .= $field_item['country'].',';
   if (!empty($field_item['postal_code']))             $address .= $field_item['postal_code'].',';
-
+  
+  $address = rtrim($address,', ');
+  
   return $address;
 }
 
-function geocoder_widget_validate_walkthrough(&$field, $form_state, $parent = NULL) {
-  if (is_array($field)) {
-    // Set the language based on the form state.
-    $lang = isset($form_state['values']['language']) ? $form_state['values']['language'] : LANGUAGE_NONE;
-
-    // If default language is set but content isnt translatable it is still 'und' on the fields.
-    if (!isset($field[$lang])) $lang = LANGUAGE_NONE;
-
-    if (!empty($field[$lang][0]) && is_array($field[$lang][0]) && (!empty($field[$lang][0]['geocoder_source']) && !empty($field[$lang][0]['geocoder_target']) && !empty($field[$lang][0]['geocoder_handler']))) {
-      // We found a source/target/handler set, let's do this.
-
-      // Can only have one handler
-      $handler = geocoder_get_handler($field[$lang][0]['geocoder_handler']);
-
-      $values = array();
-      foreach ($field[$lang][0]['geocoder_source'] as $source) {
-        // If the source is a name or text, then there is only one value
-        if (($source == 'title' || $source == 'name') && isset($form_state['values'][$source])) {
-          $main = $form_state['values'][$source];
-        }
-        else {
-          // get the field info
-          $field_info = field_info_field($source);
-          if (isset($parent) && isset($form_state['values'][$parent][$source][$lang])) {
-            foreach ($form_state['values'][$parent][$source][$lang] as $delta => $item) {
-              $values[$delta][] = geocoder_widget_parse_field($item, $field_info['type']);
-            }
-          }
-          elseif (!isset($parent) && isset($form_state['values'][$source][$lang])) {
-            foreach ($form_state['values'][$source][$lang] as $delta => $item) {
-              $values[$delta][] = geocoder_widget_parse_field($item, $field_info['type']);
-            }
-          }
-        }
-      }
-      // To avoid any conflicts, default to text.
-      $field_object = isset($field_info) ? $field_info : array('type' => 'text');
-
-      if (isset($main) && empty($values)) {
-        $item = array('value' => $main);
-        try {
-          $geometry = call_user_func($handler['field_callback'], $field_object, $item);
-        }
-        catch(Exception $e) {
-          drupal_set_message($e->getMessage(),'error');
-          return;
-        }
-
-        if ($geometry) {
-          // There is only one record here so we can use 0
-          $field[$lang][0] = geofield_get_values_from_geometry($geometry);
-        }
-      }
-      else {
-        foreach ($values as $delta => $value) {
-          try {
-            $geometry = call_user_func($handler['field_callback'], $field_object, $item);
-          }
-          catch(Exception $e) {
-            drupal_set_message($e->getMessage(),'error');
-            return;
-          }
-
-          if ($geometry) {
-            $field[$lang][$delta] = geofield_get_values_from_geometry($geometry);
-          }
-        }
-      }
-    }
-  }
-}

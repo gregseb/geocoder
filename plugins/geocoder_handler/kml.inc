@@ -31,8 +31,10 @@ function geocoder_kml_field($field, $field_item) {
   	return geocoder_kml($field_item['value']);
   }
   if ($field['type'] == 'file') {
-  	$file = file_load($field_item['fid']);
-  	$kml = file_get_contents($file->uri);
-  	return geocoder_kml($kml);
+    if ($field_item['fid']) {
+  	  $file = file_load($field_item['fid']);
+  	  $kml = file_get_contents($file->uri);
+  	  return geocoder_kml($kml);
+  	}
   }
 }
