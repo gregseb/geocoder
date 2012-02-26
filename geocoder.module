@@ -155,6 +155,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
   $available_handlers = array();
 
   // Add in the title/name
+  //@@TODO Do this programatically by getting entity_info
   switch ($instance['entity_type']) {
     case 'node':
       $all_fields['title'] = array(
@@ -174,7 +175,6 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
       $entity_fields['name']['label'] = t('Name');
       break;
   }
-
 
   // Get a list of all valid fields that we both support and are part of this entity
   foreach ($all_fields as $field) {
@@ -249,11 +249,23 @@ function geocoder_field_attach_presave($entity_type, $entity) {
       if (isset($field_instance['widget']['settings']['geocoder_handler']) && isset($field_instance['widget']['settings']['geocoder_field'])) {
         $handler = geocoder_get_handler($field_instance['widget']['settings']['geocoder_handler']);
         $field_name = is_array($field_instance['widget']['settings']['geocoder_field']) ? reset($field_instance['widget']['settings']['geocoder_field']) : $field_instance['widget']['settings']['geocoder_field'];
-        $field_info = field_info_field($field_name);
         
         // Get values for the data to be geocoded.
-        $langcode = field_language($entity_type, $entity, $field_name);
-        $items = field_get_items($entity_type, $entity, $field_name, $langcode);
+        // First check to see if it's an entity field
+        if (in_array($field_name, $entity_info['entity keys'])) {
+          $items[]['value'] = $entity->$field_name;
+          $field_info = array(
+            'type' => 'text',
+            'entity key' => TRUE,
+          );
+        }
+        else {
+          // It's a normal field-api field
+          $field_info = field_info_field($field_name);
+          $langcode = field_language($entity_type, $entity, $field_name);
+          $items = field_get_items($entity_type, $entity, $field_name, $langcode);
+        }
+        
         if (count($items)) {
           $values = array();
           
@@ -328,5 +340,10 @@ function geocoder_widget_parse_addressfield($field_item) {
   $address = rtrim($address,', ');
   
   return $address;
+}
+
+function geocoder_entity_titles($entity_type) {
+
+
 }
 
