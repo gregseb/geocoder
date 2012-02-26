@@ -7,8 +7,6 @@ function geocoder_admin_handler_filter() {
   var field_type = Drupal.settings.geocoder_widget_settings.types[field];
   var valid_handlers = Drupal.settings.geocoder_widget_settings.handlers[field_type];
   
-  console.log(valid_handlers);
-  
   // Filter the options list to ones that are valid for this field
   jQuery('#edit-instance-widget-settings-geocoder-handler option').each(function() {
   	handler_type = jQuery(this).val();
