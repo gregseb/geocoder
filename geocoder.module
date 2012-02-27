@@ -18,7 +18,6 @@ function geocoder() {
 }
 
 
-
 /**
  * Implements hook_menu().
  */
@@ -35,8 +34,6 @@ function  geocoder_menu() {
   );
   return $items;
 }
-
-
 
 
 /**
@@ -61,11 +58,17 @@ function geocoder_handler_info($field_type = NULL) {
   return $handlers;
 }
 
+/**
+ * Fetch a geocoder handler
+ */
 function geocoder_get_handler($handler_name) {
   $handlers = geocoder_handler_info();
   return $handlers[$handler_name];
 }
 
+/**
+ * Get a list of supported field types along with the processors that support them
+ */
 function geocoder_supported_field_types() {
   $supported = array();
 
@@ -82,6 +85,9 @@ function geocoder_supported_field_types() {
 	return $supported;
 }
 
+/**
+ * geoPHP loader
+ */
 function geocoder_load_geophp() {
   static $static_cache = FALSE;
 
@@ -341,9 +347,3 @@ function geocoder_widget_parse_addressfield($field_item) {
   
   return $address;
 }
-
-function geocoder_entity_titles($entity_type) {
-
-
-}
-
