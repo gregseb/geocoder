@@ -44,6 +44,13 @@ function geocoder_google($address, $return = 'point') {
     $lon = $data->results[0]->geometry->location->lng;
     
     $geom = new Point($lon, $lat);
+    
+    // Add additional meta-data to the geometry - it might be useful!
+    $geom->data = array();
+    $geom->data['geocoder_accuracy'] = $data->results[0]->geometry->location_type;
+    $geom->data['geocoder_formatted_address'] = $data->results[0]->formatted_address;
+    $geom->data['geocoder_address_components'] = $data->results[0]->address_components;
+    
     return $geom;
   }
   else {
