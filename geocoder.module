@@ -219,12 +219,13 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
 
   $form['delta_handling'] = array(
     '#type' => 'select',
-    '#title' => t('Multi-value field handling'),
+    '#title' => t('Multi-value input handling'),
+    '#description' => t('Should geometries from multiple inputs be: <ul><li>Matched with each input (e.g. One POINT for each address field)</li><li>Aggregated into a single MULTIPOINT geofield (e.g. One MULTIPOINT polygon from multiple address fields)</li><li>Broken up into multiple geometries (e.g. One MULTIPOINT to multiple POINTs.)</li></ul>'),
     '#default_value' => isset($settings['delta_handling']) ? $settings['delta_handling']: 'default',
     '#options' => array(
-      'default' => 'Match Deltas (default)',
-      's_to_m' =>  'Single-value to Multi-value',
-      'm_to_s' =>  'Multi-value to Single-value',
+      'default' => 'Match Multiples (default)',
+      'm_to_s' =>  'Multiple to Single',
+      's_to_m' =>  'Single to Multiple',
     ),
     '#required' => TRUE,
   );
