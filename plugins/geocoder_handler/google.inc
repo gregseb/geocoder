@@ -40,18 +40,27 @@ function geocoder_google($address, $return = 'point') {
   $data = json_decode($result->data);
   
   if ($data->status == 'OK') {
-    $lat = $data->results[0]->geometry->location->lat;
-    $lon = $data->results[0]->geometry->location->lng;
+    $geometries = array();
     
-    $geom = new Point($lon, $lat);
+    foreach ($data->results as $item) {
+      $geom = new Point($item->geometry->location->lng, $item->geometry->location->lat);
+      
+      // Add additional metadata to the geometry - it might be useful!
+      $geom->data = array();
+      $geom->data['geocoder_accuracy'] = $item->geometry->location_type;
+      $geom->data['geocoder_formatted_address'] = $item->formatted_address;
+      $geom->data['geocoder_address_components'] = $item->address_components;
+      
+      $geometries[] = $geom;
+    }
     
-    // Add additional meta-data to the geometry - it might be useful!
-    $geom->data = array();
-    $geom->data['geocoder_accuracy'] = $data->results[0]->geometry->location_type;
-    $geom->data['geocoder_formatted_address'] = $data->results[0]->formatted_address;
-    $geom->data['geocoder_address_components'] = $data->results[0]->address_components;
+    // The connonical geometry is the first result
+    $geometry = array_shift($geometries);
     
-    return $geom;
+    // If there are any other geometries, these are auxiliary geometries that represent "alternatives"
+    if (count($geometries)) $geometry->data['geocoder_alternatives'] = $geometries;
+    
+    return $geometry;
   }
   else {
     drupal_set_message('Error geocoding: '.$data->status,'error');
