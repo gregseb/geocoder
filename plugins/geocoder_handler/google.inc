@@ -23,7 +23,33 @@ $plugin = array(
  */
 function geocoder_google($address, $return = 'point') {
   geocoder_load_geophp();
-  return geoPHP::load($address,'google_geocode',$return);
+  
+  $query = array(
+    'address' => $address,
+    'sensor' => 'false'
+  );
+  
+  $url = url("http://maps.googleapis.com/maps/api/geocode/json", array('query' => $query));
+  $result = drupal_http_request($url);
+  
+  if (isset($result->error)) {
+    drupal_set_message('Error geocoding: '.$result->code.' '.$result->error,'error');
+    return FALSE;
+  }
+  
+  $data = json_decode($result->data);
+  
+  if ($data->status == 'OK') {
+    $lat = $data->results[0]->geometry->location->lat;
+    $lon = $data->results[0]->geometry->location->lng;
+    
+    $geom = new Point($lon, $lat);
+    return $geom;
+  }
+  else {
+    drupal_set_message('Error geocoding: '.$data->status,'error');
+    return FALSE;
+  }
 }
 
 function geocoder_google_field($field, $field_item) {
