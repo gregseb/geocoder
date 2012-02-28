@@ -1,8 +1,9 @@
 jQuery(document).ready(function(){
-	geocoder_admin_handler_filter();
+	geocoder_admin_field_selected();
+	geocoder_admin_handler_selected();
 });
 
-function geocoder_admin_handler_filter() {
+function geocoder_admin_field_selected() {
   var field = jQuery('#edit-instance-widget-settings-geocoder-field').val();
   var field_type = Drupal.settings.geocoder_widget_settings.types[field];
   var valid_handlers = Drupal.settings.geocoder_widget_settings.handlers[field_type];
@@ -32,4 +33,10 @@ function geocoder_admin_handler_in_array(needle, haystack) {
     if(haystack[i] == needle) return true;
   }
   return false;
+}
+
+function geocoder_admin_handler_selected() {
+  var handler = jQuery('#edit-instance-widget-settings-geocoder-handler').val();
+  jQuery('.geocoder-handler-setting').hide();
+  jQuery('.geocoder-handler-setting-' + handler).show();
 }

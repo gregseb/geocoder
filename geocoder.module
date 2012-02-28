@@ -203,7 +203,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#options' => $valid_fields,
     '#description' => t('Select which field you would like to geocode from.'),
     '#required' => TRUE,
-    '#attributes' => array('onchange' => 'geocoder_admin_handler_filter();'),
+    '#attributes' => array('onchange' => 'geocoder_admin_field_selected();'),
   );
 
   $form['geocoder_handler'] = array(
@@ -214,8 +214,25 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#default_value' => isset($settings['geocoder_handler']) ? $settings['geocoder_handler']: '',
     '#options' => $available_handlers,
     '#description' => t('Select which type of geocoding handler you would like to use'),
+    '#attributes' => array('onchange' => 'geocoder_admin_handler_selected();'),
     '#required' => TRUE,
   );
+  
+  $form['handler_settings'] = array(
+    '#tree' => TRUE,
+  );
+  
+  // Add the handler settings forms
+  foreach ($processors as $handler_id => $handler) {
+    if (isset($handler['settings_callback'])) {
+      $settings_callback = $handler['settings_callback'];
+      $default_values = isset($settings['handler_settings'][$handler_id]) ? $settings['handler_settings'][$handler_id] : array();
+      $form['handler_settings'][$handler_id] = $settings_callback($default_values);
+      $form['handler_settings'][$handler_id]['#type'] = 'fieldset';
+      $form['handler_settings'][$handler_id]['#attributes'] = array('class' => array('geocoder-handler-setting','geocoder-handler-setting-' . $handler_id));
+      $form['handler_settings'][$handler_id]['#title'] = $handler['title'] . ' Settings';
+    }
+  }
 
   $form['delta_handling'] = array(
     '#type' => 'select',
@@ -257,6 +274,10 @@ function geocoder_field_attach_presave($entity_type, $entity) {
         $handler = geocoder_get_handler($field_instance['widget']['settings']['geocoder_handler']);
         $field_name = is_array($field_instance['widget']['settings']['geocoder_field']) ? reset($field_instance['widget']['settings']['geocoder_field']) : $field_instance['widget']['settings']['geocoder_field'];
         
+        if (isset($field_instance['widget']['settings']['handler_settings'][$handler['name']])) {
+          $handler_settings = $field_instance['widget']['settings']['handler_settings'][$handler['name']];
+        }
+        
         // Get values for the data to be geocoded.
         // First check to see if it's an entity field
         if (in_array($field_name, $entity_info['entity keys'])) {
@@ -281,7 +302,8 @@ function geocoder_field_attach_presave($entity_type, $entity) {
           foreach ($items as $delta => $item) {
             // Geocode any value from our source field.
             try {
-              $geometry = call_user_func($handler['field_callback'], $field_info, $item);
+              if (isset($handler_settings)) $geometry = call_user_func($handler['field_callback'], $field_info, $item, $handler_settings);
+              else $geometry = call_user_func($handler['field_callback'], $field_info, $item);
               if ($geometry instanceof Geometry) $geometries[] = $geometry;
             }
             catch (Exception $e) {
@@ -292,8 +314,12 @@ function geocoder_field_attach_presave($entity_type, $entity) {
           if (empty($geometries)) $values = array(NULL);
           else {
             // Determine how we deal with deltas (multi-value fields)
-            $delta_handling = $field_instance['widget']['settings']['delta_handling'];
-            if (!$delta_handling) $delta_handling = 'default';
+            if (empty($field_instance['widget']['settings']['delta_handling'])) {
+              $delta_handling = 'default';
+            }
+            else {
+              $delta_handling = $field_instance['widget']['settings']['delta_handling'];
+            }
             
             // Default delta handling: just pass one delta to the next
             if ($delta_handling == 'default') {
