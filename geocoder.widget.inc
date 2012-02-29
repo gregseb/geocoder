@@ -7,7 +7,7 @@ function geocoder_field_widget_info() {
   return array(
     'geocoder' => array(
       'label' => t('Geocode from another field'),
-      'field types' => array('geofield','geolocation_latlng'),
+      'field types' => array('geofield','geolocation_latlng','location'),
       'behaviors' => array(
         'multiple values' => FIELD_BEHAVIOR_CUSTOM,
         'default value' => FIELD_BEHAVIOR_NONE,
@@ -303,6 +303,14 @@ function geocoder_widget_values_from_geometry($geometry, $field_type) {
       'lat_sin' => sin(deg2rad($lat)),
       'lat_cos' => cos(deg2rad($lng)),
       'lng_rad' => deg2rad($lng),
+    );
+  }
+  if ($field_type == 'location') {
+    $centroid = $geometry->centroid();
+    return array(
+      'latitude' => $centroid->y(),
+      'longitude' => $centroid->x(),
+      'source' => 2,
     );
   }
 }
