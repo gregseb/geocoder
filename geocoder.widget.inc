@@ -7,7 +7,7 @@ function geocoder_field_widget_info() {
   return array(
     'geocoder' => array(
       'label' => t('Geocode from another field'),
-      'field types' => array('geofield'),
+      'field types' => array('geofield','geolocation_latlng'),
       'behaviors' => array(
         'multiple values' => FIELD_BEHAVIOR_CUSTOM,
         'default value' => FIELD_BEHAVIOR_NONE,
@@ -146,6 +146,8 @@ function geocoder_field_attach_presave($entity_type, $entity) {
       if (isset($field_instance['widget']['settings']['geocoder_handler']) && isset($field_instance['widget']['settings']['geocoder_field'])) {
         $handler = geocoder_get_handler($field_instance['widget']['settings']['geocoder_handler']);
         $field_name = is_array($field_instance['widget']['settings']['geocoder_field']) ? reset($field_instance['widget']['settings']['geocoder_field']) : $field_instance['widget']['settings']['geocoder_field'];
+        $target_info = field_info_field($field_instance['field_name']);
+        $target_type = $target_info['type'];
         
         // Get the handler-specific-settings
         if (isset($field_instance['widget']['settings']['handler_settings'][$handler['name']])) {
@@ -190,7 +192,7 @@ function geocoder_field_attach_presave($entity_type, $entity) {
           if (empty($geometries)) $values = array(NULL);
           else {
             // Resolve multiple-values - get back values from our delta-resolver
-            $values = geocoder_widget_resolve_deltas($geometries, $delta_handling);
+            $values = geocoder_widget_resolve_deltas($geometries, $delta_handling, $target_type);
           }
           
           // Set the values - geofields do not support languages
@@ -252,13 +254,13 @@ function geocoder_widget_get_field_data($entity_type, $entity, $field_name, $del
   );
 }
 
-function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default', $field_type = 'geofield') {
+function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default', $field_type) {
   $values = array();
   
   // Default delta handling: just pass one delta to the next
   if ($delta_handling == 'default') {
     foreach ($geometries as $geometry) {
-      $values[] = geocoder_widget_values_from_geometry($geometry);
+      $values[] = geocoder_widget_values_from_geometry($geometry, $field_type);
     }
   }
   
@@ -268,18 +270,18 @@ function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default'
     if (in_array($type, array('MultiPoint','MultiLineString','MultiPolygon','GeometryCollection'))) {
       $components = $geometries[0]->getComponents();
       foreach ($components as $component) {
-        $values[] = geocoder_widget_values_from_geometry($component);
+        $values[] = geocoder_widget_values_from_geometry($component, $field_type);
       }
     }
     else {
-      $values[] = geocoder_widget_values_from_geometry($geometries[0]);
+      $values[] = geocoder_widget_values_from_geometry($geometries[0], $field_type);
     }
   }
   
   // For multiple-to-single handling, run it though geometryReduce
    if ($delta_handling == 'm_to_s' || $delta_handling = 'c_to_s') {
     $reduced_geom = geoPHP::geometryReduce($geometries);
-    $values[] = geocoder_widget_values_from_geometry($reduced_geom);
+    $values[] = geocoder_widget_values_from_geometry($reduced_geom, $field_type);
   }
   
   return $values;
@@ -288,8 +290,21 @@ function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default'
 /**
  * Given a geometry and the field type, return back a values array for that field.
  */
-function geocoder_widget_values_from_geometry($geometry, $field_type = 'geofield') {
+function geocoder_widget_values_from_geometry($geometry, $field_type) {
   if ($field_type == 'geofield') return geofield_get_values_from_geometry($geometry);
+  if ($field_type == 'geolocation_latlng') {
+    $centroid = $geometry->centroid();
+    $lat = $centroid->y();
+    $lng = $centroid->x();
+    
+    return array(
+      'lat' => $lat,
+      'lng' => $lng,
+      'lat_sin' => sin(deg2rad($lat)),
+      'lat_cos' => cos(deg2rad($lng)),
+      'lng_rad' => deg2rad($lng),
+    );
+  }
 }
 
 
