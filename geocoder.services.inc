@@ -27,13 +27,20 @@ function geocoder_services_resources() {
             'optional' => FALSE,
           ),
           array(
-            'name' => 'format',
+            'name' => 'output',
             'type' => 'string',
             'description' => 'Output Format (GPX, WKT, etc.)',
-            'source' => array('param' => 'format'),
+            'source' => array('param' => 'output'),
             'optional' => TRUE,
           ),
         ),
+      ),
+      'index' => array(
+        'help' => 'List Geocoder Capabilities',
+        'file' => array('type' => 'inc', 'module' => 'geocoder', 'name' => 'geocoder.services'),
+        'callback' => 'geocoder_services_capabilities',
+        'access callback' => 'geocoder_services_access',
+        'access arguments' => array('capabilitie'),
       ),
     ),
   );
@@ -52,15 +59,37 @@ function geocoder_services_access($action = 'geocode') {
  * @return object
  */
 function geocoder_services_geocode($handler, $data, $format = 'default') {
+  geocoder_load_geophp();
+  if (!in_array($handler, array_keys(geocoder_handler_info()))) {
+    drupal_set_message(t('Could not find handler @handler',array('@handler' => $handler)),'error');
+    drupal_not_found();
+    exit();
+  }
+  if (($format && $format != 'default') && !in_array($format, array_keys(geoPHP::getAdapterMap()))) {
+    drupal_set_message(t('Could not find format @format',array('@format' => $format)),'error');
+    drupal_not_found();
+    exit();
+  }
+  
   $geom = geocoder($handler, $data);
-  if ($format == 'default') {
+  if (!$format || $format == 'default') {
     $result = $geom->out('json');
     return json_decode($result);
   }
   else {
-    $result = $geom->out($format);
-    $obj = new stdClass;
-    $obj->result = $result;
-    return $obj;
+    return $geom->out($format);
   }
+}
+
+function geocoder_services_capabilities() {
+  geocoder_load_geophp();
+  $object = new stdClass();
+  $object->handlers = array();
+  $object->output = geoPHP::getAdapterMap();
+  
+  foreach (geocoder_handler_info() as $hid => $handler) {
+    $object->handlers[$hid] = $handler['description'];
+  }
+  
+  return $object;
 }
