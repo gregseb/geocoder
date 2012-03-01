@@ -1,6 +1,7 @@
 <?php
 
 include_once('geocoder.widget.inc');
+include_once('geocoder.services.inc');
 
 /**
  * The Geocode API call.
