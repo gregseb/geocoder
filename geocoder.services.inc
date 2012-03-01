@@ -60,7 +60,7 @@ function geocoder_services_access($action = 'geocode') {
  */
 function geocoder_services_geocode($handler, $data, $format = 'default') {
   geocoder_load_geophp();
-  if (!in_array($handler, array_keys(geocoder_handler_info()))) {
+  if (!in_array($handler, array_keys(geocoder_services_handlers()))) {
     drupal_set_message(t('Could not find handler @handler',array('@handler' => $handler)),'error');
     drupal_not_found();
     exit();
@@ -84,12 +84,17 @@ function geocoder_services_geocode($handler, $data, $format = 'default') {
 function geocoder_services_capabilities() {
   geocoder_load_geophp();
   $object = new stdClass();
-  $object->handlers = array();
+  $object->handlers = geocoder_services_handlers();
   $object->output = geoPHP::getAdapterMap();
-  
-  foreach (geocoder_handler_info() as $hid => $handler) {
-    $object->handlers[$hid] = $handler['description'];
-  }
-  
   return $object;
+}
+
+function geocoder_services_handlers() {
+  $handlers = array();
+  foreach (geocoder_handler_info() as $hid => $handler) {
+    if (!isset($handler['safe']) || $handler['safe']) {
+      $handlers[$hid] = $handler['description'];
+    }
+  }
+  return $handlers;
 }

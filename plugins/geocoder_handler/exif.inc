@@ -8,6 +8,7 @@ if (function_exists('exif_read_data')) {
 	  'callback' => 'geocoder_exif',
 	  'field_types' => array('file','image'),
 	  'field_callback' => 'geocoder_exif_field',
+	  'safe' => FALSE,
 	);
 }
 
