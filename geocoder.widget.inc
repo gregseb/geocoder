@@ -162,11 +162,9 @@ function geocoder_field_attach_presave($entity_type, $entity) {
           $delta_handling = $field_instance['widget']['settings']['delta_handling'];
         }
         
-        $field_data = geocoder_widget_get_field_data($entity_type, $entity, $field_name, $delta_handling);
-        $field_info = $field_data['field_info'];
-        $items = $field_data['items'];
+        list($field_info, $items) = geocoder_widget_get_field_data($entity_type, $entity, $field_name, $delta_handling);
         
-        if (count($items)) {
+        if (is_array($items) && count($items)) {
           $values = array();
           
           // Geocode geometries
@@ -249,8 +247,8 @@ function geocoder_widget_get_field_data($entity_type, $entity, $field_name, $del
   }
   
   return array(
-    'items' => $items,
-    'field_info' => $field_info,
+    $field_info,
+    $items, 
   );
 }
 
