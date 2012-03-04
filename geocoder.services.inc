@@ -66,8 +66,7 @@ function geocoder_services_geocode($handler, $data, $format = 'default') {
     exit();
   }
   if (($format && $format != 'default') && !in_array($format, array_keys(geoPHP::getAdapterMap()))) {
-    drupal_set_message(t('Could not find format @format',array('@format' => $format)),'error');
-    drupal_not_found();
+    throw new Exception(t('Could not find output-format @format',array('@format' => $format)),'error');
     exit();
   }
   
