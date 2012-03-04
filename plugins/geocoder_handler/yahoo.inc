@@ -16,6 +16,7 @@ $plugin = array(
   'callback' => 'geocoder_yahoo',
   'field_types' => array('text','text_long','addressfield','text_with_summary','computed', 'taxonomy_term_reference'),
   'field_callback' => 'geocoder_yahoo_field',
+  'terms_of_service' => 'http://developer.yahoo.com/geo/placefinder/',
 );
 
 /**

@@ -17,6 +17,7 @@ $plugin = array(
   'field_types' => array('text','text_long','addressfield','text_with_summary','computed', 'taxonomy_term_reference'),
   'field_callback' => 'geocoder_google_field',
   'settings_callback' => 'geocoder_google_form',
+  'terms_of_service' => 'http://code.google.com/apis/maps/documentation/geocoding/#Limits',
 );
 
 /**

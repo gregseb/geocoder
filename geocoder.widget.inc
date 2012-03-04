@@ -95,13 +95,24 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
   
   // Add the handler settings forms
   foreach ($processors as $handler_id => $handler) {
-    if (isset($handler['settings_callback'])) {
-      $settings_callback = $handler['settings_callback'];
+    if (isset($handler['settings_callback']) || isset($handler['terms_of_service'])) {
       $default_values = isset($settings['handler_settings'][$handler_id]) ? $settings['handler_settings'][$handler_id] : array();
-      $form['handler_settings'][$handler_id] = $settings_callback($default_values);
+      $form['handler_settings'][$handler_id] = array();
       $form['handler_settings'][$handler_id]['#type'] = 'fieldset';
       $form['handler_settings'][$handler_id]['#attributes'] = array('class' => array('geocoder-handler-setting','geocoder-handler-setting-' . $handler_id));
-      $form['handler_settings'][$handler_id]['#title'] = $handler['title'] . ' Settings';
+      $form['handler_settings'][$handler_id]['#title'] = $handler['title'] . ' Settings';      
+
+      if (isset($handler['terms_of_service'])) {
+        $form['handler_settings'][$handler_id]['tos'] = array(
+          '#type' => 'item',
+          '#markup' => t('This handler has terms of service. Click the following link to learn more.') . ' ' . l($handler['terms_of_service'], $handler['terms_of_service']),
+        );
+      }
+
+      if (isset($handler['settings_callback'])) {
+        $settings_callback = $handler['settings_callback'];
+        $form['handler_settings'][$handler_id] = array_merge($form['handler_settings'][$handler_id], $settings_callback($default_values));
+      }
     }
   }
 
