@@ -9,7 +9,7 @@ function geocoder_drush_command() {
   // the key in the $items array is the name of the command.
   $items['geocoder-backfill'] = array(
     'callback' => 'geocoder_drush_backfill',
-    'description' => "Geocodes all entities that have a geocoder widget but no geodata.",
+    'description' => "Geocodes all nodes that have a geocoder widget but no geodata.",
   );
   
   return $items;
