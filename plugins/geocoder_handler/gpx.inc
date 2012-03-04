@@ -25,7 +25,7 @@ $plugin = array(
  * Process GPX
  */
 function geocoder_gpx($gpx_string) {
-  geocoder_load_geophp();
+  geophp_load();
   return geoPHP::load($gpx_string,'gpx');
 }
 

@@ -23,7 +23,7 @@ $plugin = array(
  * Process Markup
  */
 function geocoder_google($address, $options = array()) {
-  geocoder_load_geophp();
+  geophp_load();
   
   $query = array(
     'address' => $address,

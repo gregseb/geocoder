@@ -27,7 +27,7 @@ function geocoder_yahoo($address, $return = 'point') {
   $request = drupal_http_request("http://where.yahooapis.com/geocode?location=" . urlencode($address) . "&flags=J&appid={$consumer_key}");
   $data = json_decode($request->data);
 
-  geocoder_load_geophp();
+  geophp_load();
   return _geocoder_yahoo_geometry($data, $return);
 }
 

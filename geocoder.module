@@ -88,25 +88,6 @@ function geocoder_supported_field_types() {
 	return $supported;
 }
 
-/**
- * geoPHP loader
- */
-function geocoder_load_geophp() {
-  static $static_cache = FALSE;
-
-  if (!$static_cache) {
-    $path = libraries_get_path('geoPHP');
-    $file = $path.'/geoPHP.inc';
-    if (file_exists($file)) {
-      if (include_once($file)) {
-        $static_cache = $file;
-      }
-    }
-  }
-
-  return $static_cache;
-}
-
 
 /**
  * Implementation of hook_ctools_plugin_api().

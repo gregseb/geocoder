@@ -2,5 +2,5 @@
 name = Geocoder API
 description = An API to geocode various known data into other GIS data types.
 core = 7.x
-dependencies[] = libraries
+dependencies[] = geophp
 dependencies[] = ctools

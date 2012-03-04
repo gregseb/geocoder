@@ -13,7 +13,7 @@ if (function_exists('exif_read_data')) {
 }
 
 function geocoder_exif($filepath) {
-	geocoder_load_geophp();
+	geophp_load();
   if ($data = exif_read_data($filepath)) {
     if (!isset($data['GPSLatitudeRef'])) return FALSE;
     $lat = geocoder_exif_from($data['GPSLatitudeRef'], $data['GPSLatitude']);

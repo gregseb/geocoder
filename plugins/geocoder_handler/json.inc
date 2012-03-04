@@ -22,7 +22,7 @@ $plugin = array(
  * Process Markup
  */
 function geocoder_json($json_string) {
-  geocoder_load_geophp();
+  geophp_load();
   return geoPHP::load($json_string,'json');
 }
 
