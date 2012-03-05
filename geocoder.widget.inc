@@ -7,7 +7,7 @@ function geocoder_field_widget_info() {
   return array(
     'geocoder' => array(
       'label' => t('Geocode from another field'),
-      'field types' => array('geofield','geolocation_latlng','location'),
+      'field types' => array('geofield', 'geolocation_latlng', 'location'),
       'behaviors' => array(
         'multiple values' => FIELD_BEHAVIOR_CUSTOM,
         'default value' => FIELD_BEHAVIOR_NONE,
@@ -99,7 +99,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
       $default_values = isset($settings['handler_settings'][$handler_id]) ? $settings['handler_settings'][$handler_id] : array();
       $form['handler_settings'][$handler_id] = array();
       $form['handler_settings'][$handler_id]['#type'] = 'fieldset';
-      $form['handler_settings'][$handler_id]['#attributes'] = array('class' => array('geocoder-handler-setting','geocoder-handler-setting-' . $handler_id));
+      $form['handler_settings'][$handler_id]['#attributes'] = array('class' => array('geocoder-handler-setting', 'geocoder-handler-setting-' . $handler_id));
       $form['handler_settings'][$handler_id]['#title'] = $handler['title'] . ' Settings';      
 
       if (isset($handler['terms_of_service'])) {
@@ -131,8 +131,8 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#required' => TRUE,
   );
 
-  drupal_add_js(array('geocoder_widget_settings' => array('handlers' => $handlers_by_type, 'types' => $field_types)),'setting');
-  drupal_add_js(drupal_get_path('module','geocoder').'/geocoder.admin.js','file');
+  drupal_add_js(array('geocoder_widget_settings' => array('handlers' => $handlers_by_type, 'types' => $field_types)), 'setting');
+  drupal_add_js(drupal_get_path('module', 'geocoder') . '/geocoder.admin.js', 'file');
 
   return $form;
 }
@@ -240,16 +240,16 @@ function geocoder_widget_get_field_data($entity_type, $entity, $field_name, $del
   
   // Check if we should concatenate
   if ($delta_handling == 'c_to_s' || $delta_handling == 'c_to_m') {
-    $support_concat = array('text','text_long','computed','text_with_summary','computed');
+    $support_concat = array('text', 'text_long', 'computed', 'text_with_summary', 'computed');
     if (!in_array($field_info['type'], $support_concat)) {
-      drupal_set_message('Trying to concatenate a non-text field');
+      drupal_set_message(t('Trying to concatenate a non-text field'));
       return;
     }
     $concat = '';
     foreach ($items as $item) {
-      $concat .= trim($item['value']).', ';
+      $concat .= trim($item['value']) . ', ';
     }
-    $concat = trim($concat,', ');
+    $concat = trim($concat, ', ');
     $items = array(array('value' => $concat));
     $field_info = array(
       'type' => 'text',
@@ -276,7 +276,7 @@ function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default'
   // Single-to-multiple handling - if we can, explode out the component geometries
   if ($delta_handling == 's_to_m' || $delta_handling = 'c_to_m') {
     $type = $geometries[0]->geometryType();
-    if (in_array($type, array('MultiPoint','MultiLineString','MultiPolygon','GeometryCollection'))) {
+    if (in_array($type, array('MultiPoint', 'MultiLineString', 'MultiPolygon', 'GeometryCollection'))) {
       $components = $geometries[0]->getComponents();
       foreach ($components as $component) {
         $values[] = geocoder_widget_values_from_geometry($component, $field_type);
@@ -330,15 +330,15 @@ function geocoder_widget_values_from_geometry($geometry, $field_type) {
  */
 function geocoder_widget_parse_addressfield($field_item) {
   $address = '';
-  if (!empty($field_item['premise']))                 $address .= $field_item['premise'].',';
-  if (!empty($field_item['thoroughfare']))            $address .= $field_item['thoroughfare'].',';
-  if (!empty($field_item['locality']))                $address .= $field_item['locality'].',';
-  if (!empty($field_item['administrative_area']))     $address .= $field_item['administrative_area'].',';
-  if (!empty($field_item['sub_administrative_area'])) $address .= $field_item['sub_administrative_area'].',';
-  if (!empty($field_item['country']))                 $address .= $field_item['country'].',';
-  if (!empty($field_item['postal_code']))             $address .= $field_item['postal_code'].',';
+  if (!empty($field_item['premise']))                 $address .= $field_item['premise'] . ',';
+  if (!empty($field_item['thoroughfare']))            $address .= $field_item['thoroughfare'] . ',';
+  if (!empty($field_item['locality']))                $address .= $field_item['locality'] . ',';
+  if (!empty($field_item['administrative_area']))     $address .= $field_item['administrative_area'] . ',';
+  if (!empty($field_item['sub_administrative_area'])) $address .= $field_item['sub_administrative_area'] . ',';
+  if (!empty($field_item['country']))                 $address .= $field_item['country'] . ',';
+  if (!empty($field_item['postal_code']))             $address .= $field_item['postal_code'] . ',';
   
-  $address = rtrim($address,', ');
+  $address = rtrim($address, ', ');
   
   return $address;
 }

@@ -61,12 +61,12 @@ function geocoder_services_access($action = 'geocode') {
 function geocoder_services_geocode($handler, $data, $format = 'default') {
   geophp_load();
   if (!in_array($handler, array_keys(geocoder_services_handlers()))) {
-    drupal_set_message(t('Could not find handler @handler',array('@handler' => $handler)),'error');
+    drupal_set_message(t('Could not find handler @handler', array('@handler' => $handler)), 'error');
     drupal_not_found();
     exit();
   }
   if (($format && $format != 'default') && !in_array($format, array_keys(geoPHP::getAdapterMap()))) {
-    throw new Exception(t('Could not find output-format @format',array('@format' => $format)),'error');
+    throw new Exception(t('Could not find output-format @format', array('@format' => $format)), 'error');
     exit();
   }
   

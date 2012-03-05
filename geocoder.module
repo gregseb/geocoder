@@ -15,7 +15,7 @@ function geocoder() {
   $args = func_get_args();
   $processor_name = array_shift($args);
   $processor = ctools_get_plugins('geocoder', 'geocoder_handler', $processor_name);
-  $geometry = call_user_func_array($processor['callback'],$args);
+  $geometry = call_user_func_array($processor['callback'], $args);
 
   return $geometry;
 }
@@ -51,7 +51,7 @@ function geocoder_handler_info($field_type = NULL) {
   }
   if ($field_type) {
     $field_handlers = $handlers;
-    foreach($field_handlers as $i => $handler) {
+    foreach ($field_handlers as $i => $handler) {
       if (!isset($handler['field_types']) || !in_array($field_type, $handler['field_types'])) {
         unset($field_handlers[$i]);
       }
@@ -84,8 +84,8 @@ function geocoder_supported_field_types() {
       }
     }
   }
-
-	return $supported;
+  
+  return $supported;
 }
 
 

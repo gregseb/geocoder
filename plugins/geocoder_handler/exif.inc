@@ -2,18 +2,18 @@
 
 
 if (function_exists('exif_read_data')) {
-	$plugin = array(
-	  'title' => t("Image/exif"),
-	  'description' => t('Get a location from an image that was taken with a GPS enabled phone or camera'),
-	  'callback' => 'geocoder_exif',
-	  'field_types' => array('file','image'),
-	  'field_callback' => 'geocoder_exif_field',
-	  'safe' => FALSE,
-	);
+  $plugin = array(
+    'title' => t("Image/exif"),
+    'description' => t('Get a location from an image that was taken with a GPS enabled phone or camera'),
+    'callback' => 'geocoder_exif',
+    'field_types' => array('file', 'image'),
+    'field_callback' => 'geocoder_exif_field',
+    'safe' => FALSE,
+  );
 }
 
 function geocoder_exif($filepath) {
-	geophp_load();
+  geophp_load();
   if ($data = exif_read_data($filepath)) {
     if (!isset($data['GPSLatitudeRef'])) return FALSE;
     $lat = geocoder_exif_from($data['GPSLatitudeRef'], $data['GPSLatitude']);

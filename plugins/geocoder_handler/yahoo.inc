@@ -14,7 +14,7 @@ $plugin = array(
   'title' => t("Yahoo Placefinder"),
   'description' => t('Geocodes via Yahoo Placefinder'),
   'callback' => 'geocoder_yahoo',
-  'field_types' => array('text','text_long','addressfield','text_with_summary','computed', 'taxonomy_term_reference'),
+  'field_types' => array('text', 'text_long', 'addressfield', 'text_with_summary', 'computed', 'taxonomy_term_reference'),
   'field_callback' => 'geocoder_yahoo_field',
   'terms_of_service' => 'http://developer.yahoo.com/geo/placefinder/',
 );
@@ -23,7 +23,7 @@ $plugin = array(
  * Process Markup
  */
 function geocoder_yahoo($address, $return = 'point') {
-  $geocoder_settings = variable_get("geocoder_settings",array());
+  $geocoder_settings = variable_get("geocoder_settings", array());
   $consumer_key = $geocoder_settings["geocoder_apikey_yahoo"];
   $request = drupal_http_request("http://where.yahooapis.com/geocode?location=" . urlencode($address) . "&flags=J&appid={$consumer_key}");
   $data = json_decode($request->data);
@@ -47,12 +47,12 @@ function geocoder_yahoo_field($field, $field_item) {
 }
 
 function _geocoder_yahoo_geometry(&$data, $return = 'point') {
-  if(!isset($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0])) {
+  if (!isset($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0])) {
     return NULL;
   }
-  switch($return) {
+  switch ($return) {
     case "point":
-      return new Point ($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0]->latitude);
+      return new Point($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0]->latitude);
       break;
   }
 }
