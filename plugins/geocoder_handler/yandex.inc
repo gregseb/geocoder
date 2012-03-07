@@ -33,8 +33,7 @@ function geocoder_yandex($address, $options = array()) {
   );
   $request = drupal_http_request("http://geocode-maps.yandex.ru/1.x/?" . http_build_query($params));
   $data = json_decode($request->data);
-
-  geocoder_load_geophp();
+  
   return _geocoder_yandex_geometry($data);
 }
 
@@ -53,6 +52,8 @@ function geocoder_yandex_field($field, $field_item) {
 }
 
 function _geocoder_yandex_geometry(&$data) {
+  geophp_load();
+  
   if($data->response->GeoObjectCollection->metaDataProperty->GeocoderResponseMetaData->found == 0) {
     return NULL;
   }
