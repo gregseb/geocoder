@@ -53,7 +53,9 @@ function geocoder_yandex_field($field, $field_item) {
 
 function _geocoder_yandex_geometry(&$data) {
   geophp_load();
-  
+  if (isset($data->error)) {
+    drupal_set_message($data->error->status . ' ' . $data->error->message, 'error');
+  }
   if($data->response->GeoObjectCollection->metaDataProperty->GeocoderResponseMetaData->found == 0) {
     return NULL;
   }
