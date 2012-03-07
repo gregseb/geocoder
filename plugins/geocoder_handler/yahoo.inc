@@ -22,14 +22,14 @@ $plugin = array(
 /**
  * Process Markup
  */
-function geocoder_yahoo($address, $return = 'point') {
+function geocoder_yahoo($address, $options = array()) {
   $geocoder_settings = variable_get("geocoder_settings", array());
   $consumer_key = $geocoder_settings["geocoder_apikey_yahoo"];
   $request = drupal_http_request("http://where.yahooapis.com/geocode?location=" . urlencode($address) . "&flags=J&appid={$consumer_key}");
   $data = json_decode($request->data);
 
   geophp_load();
-  return _geocoder_yahoo_geometry($data, $return);
+  return _geocoder_yahoo_geometry($data);
 }
 
 function geocoder_yahoo_field($field, $field_item) {
@@ -46,14 +46,10 @@ function geocoder_yahoo_field($field, $field_item) {
   }
 }
 
-function _geocoder_yahoo_geometry(&$data, $return = 'point') {
+function _geocoder_yahoo_geometry(&$data) {
   if (!isset($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0])) {
     return NULL;
   }
-  switch ($return) {
-    case "point":
-      return new Point($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0]->latitude);
-      break;
-  }
+  return new Point($data->ResultSet->Results[0]->longitude, $data->ResultSet->Results[0]->latitude);
 }
 

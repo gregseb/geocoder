@@ -21,7 +21,7 @@ $plugin = array(
 /**
  * Process WKT
  */
-function geocoder_wkt($wkt) {
+function geocoder_wkt($wkt, $options = array()) {
   geophp_load();
   return geoPHP::load($wkt, 'wkt');
 }

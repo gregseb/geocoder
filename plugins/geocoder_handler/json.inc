@@ -21,7 +21,7 @@ $plugin = array(
 /**
  * Process Markup
  */
-function geocoder_json($json_string) {
+function geocoder_json($json_string, $options = array()) {
   geophp_load();
   return geoPHP::load($json_string, 'json');
 }

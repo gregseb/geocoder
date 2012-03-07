@@ -21,7 +21,7 @@ function geocoder_field_widget_info() {
  */
 function geocoder_field_widget_settings_form($this_field, $instance) {
   $settings = $instance['widget']['settings'];
-
+  
   $entity_fields = field_info_instances($instance['entity_type'], $instance['bundle']);
   $all_fields = field_info_fields();
   $supported_field_types = geocoder_supported_field_types();
@@ -30,7 +30,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
   $field_types = array();
   $valid_fields = array();
   $available_handlers = array();
-
+  
   // Add in the title/name
   //@@TODO Do this programatically by getting entity_info
   switch ($instance['entity_type']) {
@@ -52,7 +52,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
       $entity_fields['name']['label'] = t('Name');
       break;
   }
-
+  
   // Get a list of all valid fields that we both support and are part of this entity
   foreach ($all_fields as $field) {
     if (array_key_exists($field['field_name'], $entity_fields)) {
@@ -66,7 +66,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
       }
     }
   }
-
+  
   $form['geocoder_field'] = array(
     '#type' => 'select',
     '#title' => t('Geocode from field'),
@@ -76,7 +76,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#required' => TRUE,
     '#attributes' => array('onchange' => 'geocoder_admin_field_selected();'),
   );
-
+  
   $form['geocoder_handler'] = array(
     '#type' => 'select',
     '#title' => t('Geocoder'),
@@ -115,7 +115,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
       }
     }
   }
-
+  
   $form['delta_handling'] = array(
     '#type' => 'select',
     '#title' => t('Multi-value input handling'),
@@ -130,15 +130,11 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     ),
     '#required' => TRUE,
   );
-
+  
   drupal_add_js(array('geocoder_widget_settings' => array('handlers' => $handlers_by_type, 'types' => $field_types)), 'setting');
   drupal_add_js(drupal_get_path('module', 'geocoder') . '/geocoder.admin.js', 'file');
-
+  
   return $form;
-}
-
-function geocoder_field_widget_settings_form_callback($form, $form_state) {
-  return $form['geocoder_handler'];
 }
 
 /**
@@ -263,6 +259,12 @@ function geocoder_widget_get_field_data($entity_type, $entity, $field_name, $del
   );
 }
 
+/**
+ * Geocder Widget - Resolve Deltas
+ * 
+ * Given a list of geometries, and user configuration on how to handle deltas, 
+ * we created a list of items to be inserted into the fields.
+ */
 function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default', $field_type) {
   $values = array();
   
@@ -297,7 +299,10 @@ function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default'
 }
 
 /**
+ * Geocder Widget - Field values from geometry
+ * 
  * Given a geometry and the field type, return back a values array for that field.
+ * The passed back array represents a single delta. 
  */
 function geocoder_widget_values_from_geometry($geometry, $field_type) {
   if ($field_type == 'geofield') return geofield_get_values_from_geometry($geometry);
@@ -326,7 +331,7 @@ function geocoder_widget_values_from_geometry($geometry, $field_type) {
 
 
 /**
- * Helper Function: Parse and address field
+ * Geocoder Widget - Parse an address field
  */
 function geocoder_widget_parse_addressfield($field_item) {
   $address = '';

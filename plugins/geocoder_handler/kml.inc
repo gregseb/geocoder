@@ -21,7 +21,7 @@ $plugin = array(
 /**
  * Process Markup
  */
-function geocoder_kml($kml_string) {
+function geocoder_kml($kml_string, $options = array()) {
   geophp_load();
   return geoPHP::load($kml_string, 'kml');
 }

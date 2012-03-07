@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Module file for geocoder module.
+ */
+ 
 include_once('geocoder.widget.inc');
 include_once('geocoder.services.inc');
 
@@ -9,15 +14,11 @@ include_once('geocoder.services.inc');
  *    geocoder('google','4925 Gair Ave, Terrace, BC');
  *    geocoder('google','New York City',array('geometry_type' => 'bounds'));
  */
-function geocoder() {
+function geocoder($handler, $data, $options = array()) {
   ctools_include('plugins');
-
-  $args = func_get_args();
-  $processor_name = array_shift($args);
-  $processor = ctools_get_plugins('geocoder', 'geocoder_handler', $processor_name);
-  $geometry = call_user_func_array($processor['callback'], $args);
-
-  return $geometry;
+  
+  $processor = ctools_get_plugins('geocoder', 'geocoder_handler', $handler);
+  return call_user_func($processor['callback'], $data, $options);
 }
 
 
@@ -35,12 +36,25 @@ function  geocoder_menu() {
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM, // optional
   );
+  $items['geocoder/service/%'] = array(
+    'title' => 'AJAX / AJAJ geocoding service',
+    'description' => 'Provides basic callback for geocoding using JavaScript',
+    'page callback' => 'geocoder_service_callback',
+    'page arguments' => array(2),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array(arg(2)),
+    'access callback' => 'geocoder_service_check_perms',
+  );
   return $items;
 }
 
 
 /**
- * Return a list of all handlers that might geocoder something for you.
+ * Geocoder Handler Information
+ * 
+ * Return a list of all handlers that might geocode something for you.
+ * Optionally you may pass a field-type and get back a list of 
+ * handlers that are compatible with that field.
  */
 function geocoder_handler_info($field_type = NULL) {
   ctools_include('plugins');
@@ -62,7 +76,9 @@ function geocoder_handler_info($field_type = NULL) {
 }
 
 /**
- * Fetch a geocoder handler
+ * Fetch geocoder handler
+ * 
+ * Given a name, fetch the full handler definition
  */
 function geocoder_get_handler($handler_name) {
   $handlers = geocoder_handler_info();
@@ -70,6 +86,8 @@ function geocoder_get_handler($handler_name) {
 }
 
 /**
+ * Get supported field types
+ * 
  * Get a list of supported field types along with the processors that support them
  */
 function geocoder_supported_field_types() {
@@ -113,3 +131,130 @@ function geocoder_ctools_plugin_type() {
   );
 }
 
+// These functions have to do with providing AJAX / AHAH 
+// service functionality so that users can make use of
+// geocoder interactively via JavaScript.
+
+/**
+ * Implements hook_permission().
+ * 
+ * We define permissions for accessing geocoder over AJAX / services. 
+ * There is one global permission which gives access to everything, 
+ * and one permission per handler. The site-administrator can therefore
+ * fine tune which handlers are accessible. Note that to use AJAX with
+ * geocoder these permissions need to be set.
+ */
+function geocoder_permission() {
+  $handler_info = geocoder_handler_info();
+  $perms = array(
+    'geocoder_service_all_handlers' =>  array(
+      'title' => t('Can use all Geocoder handlers through AJAX / service'),
+    ),
+  );
+  foreach (geocoder_service_handlers() as $name => $desc) {
+    $perms['geocoder_service_handler_' . $name] = array(
+      'title' => t('Can geocode using @handler through AJAX / service', array('@handler' => $handler_info[$name]['title'])),
+    );
+  }
+  return $perms;
+}
+
+/**
+ * Geocoder service check permissions
+ * 
+ * Given a handler, check to see if the user has
+ * permission to execute it via AJAX / services
+ */ 
+function geocoder_service_check_perms($handler) {
+  return (user_access('geocoder_service_all_handlers') || user_access('geocoder_service_handler_' . $handler));
+}
+
+/**
+ * Page callback for AJAX / Geocoder service
+ * 
+ * This service can be accessed at /geocoder/service/<handler>
+ * and takes the query-parameter "data". Optinally a "format"
+ * paramater may also be passed. "format" corresponds to
+ * geoPHP output formats.
+ * 
+ * Some examples:
+ * /geocoder/service/google?data=4925 Gair Ave, Terrace, BC
+ * /geocoder/service/wkt?data=POINT(10 10)
+ * /geocoder/service/yahoo?data=94112&format=wkt 
+ */ 
+function geocoder_service_callback($handler) {
+  if (!isset($_GET['data'])) {
+    throw new Exception(t('No data parameter found'));
+    exit();
+  }
+  
+  $format = isset($_GET['format']) ?  $_GET['format'] : 'json';
+  
+  geophp_load();
+  geocoder_service_check_request($handler, $format);
+  $geom = geocoder($handler, $_GET['data']);
+  
+  header('Content-Type: ' . geocoder_service_get_content_type($format));
+  print $geom->out($format);
+  exit();
+}
+
+/**
+ * Get Content-Type for an output format
+ * 
+ * Given an output format, this helper function passes
+ * a compatible HTTP content-type to be placed in the
+ * header. 
+ */ 
+function geocoder_service_get_content_type($format) {
+  $types = array(
+    'json' => 'application/json',
+    'kml' => 'application/xml',
+    'georss' => 'application/xml',
+    'gpx' => 'application/xml',
+    'wkt' => 'text/plain',
+    'wkb' => 'text/plain',
+    'google_geocode' => 'text/plain',
+  );
+  return $types[$format];
+}
+
+/**
+ * Geocoder Service Check Request
+ * 
+ * Check to make sure the request to the service is valid. This
+ * checks to make sure the handler and the format exists, and 
+ * also checks permission
+ */ 
+function geocoder_service_check_request($handler, $format, $check_ac = TRUE) {
+  if (!in_array($handler, array_keys(geocoder_service_handlers()))) {
+    drupal_set_message(t('Could not find handler @handler', array('@handler' => $handler)), 'error');
+    drupal_not_found();
+    exit();
+  }
+  if (($format && $format != 'default') && !in_array($format, array_keys(geoPHP::getAdapterMap()))) {
+    throw new Exception(t('Could not find output-format @format', array('@format' => $format)), 'error');
+    exit();
+  }
+  if (!geocoder_service_check_perms($handler)) {
+    drupal_access_denied();
+    exit();
+  }
+}
+
+/**
+ * Geocoder Service Handlers
+ * 
+ * Get a list of all handlers that can be used via a service. 
+ * This filters out "unsafe" handlers (such as exif). A hanlder can 
+ * be marked as unsafe by settings "safe" => FALSE in it's definition.
+ */ 
+function geocoder_service_handlers() {
+  $handlers = array();
+  foreach (geocoder_handler_info() as $hid => $handler) {
+    if (!isset($handler['safe']) || $handler['safe']) {
+      $handlers[$hid] = $handler['description'];
+    }
+  }
+  return $handlers;
+}

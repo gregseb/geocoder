@@ -1,6 +1,6 @@
 <?php
 /**
- * Implements geocoder_services_resources().
+ * Implements hook_services_resources().
  */
 function geocoder_services_resources() {
   return array(
@@ -10,7 +10,7 @@ function geocoder_services_resources() {
         'file' => array('type' => 'inc', 'module' => 'geocoder', 'name' => 'geocoder.services'),
         'callback' => 'geocoder_services_geocode',
         'access callback' => 'geocoder_services_access',
-        'access arguments' => array('geocode'),
+        'access arguments append' => TRUE,
         'args' => array(
           array(
             'name' => 'handler',
@@ -39,36 +39,29 @@ function geocoder_services_resources() {
         'help' => 'List Geocoder Capabilities',
         'file' => array('type' => 'inc', 'module' => 'geocoder', 'name' => 'geocoder.services'),
         'callback' => 'geocoder_services_capabilities',
-        'access callback' => 'geocoder_services_access',
-        'access arguments' => array('capabilitie'),
+        'access callback' => TRUE,
       ),
     ),
   );
 }
 
-//@@TODO: Implement this
-function geocoder_services_access($action = 'geocode') {
-  return TRUE;
+function geocoder_services_access($handler, $data, $output) {
+  if ($handler == 'default') {
+    $handler == 'json';
+  }
+  return geocoder_service_check_perms($handler);
 }
 
 /**
  * Callback for geocoding service
  *
- * @param int $id
- * @param object $data
+ * @param string $handler
+ * @param string $data
  * @return object
  */
 function geocoder_services_geocode($handler, $data, $format = 'default') {
   geophp_load();
-  if (!in_array($handler, array_keys(geocoder_services_handlers()))) {
-    drupal_set_message(t('Could not find handler @handler', array('@handler' => $handler)), 'error');
-    drupal_not_found();
-    exit();
-  }
-  if (($format && $format != 'default') && !in_array($format, array_keys(geoPHP::getAdapterMap()))) {
-    throw new Exception(t('Could not find output-format @format', array('@format' => $format)), 'error');
-    exit();
-  }
+  geocoder_service_check_request($handler, $format);
   
   $geom = geocoder($handler, $data);
   if (!$format || $format == 'default') {
@@ -83,17 +76,7 @@ function geocoder_services_geocode($handler, $data, $format = 'default') {
 function geocoder_services_capabilities() {
   geophp_load();
   $object = new stdClass();
-  $object->handlers = geocoder_services_handlers();
+  $object->handlers = geocoder_service_handlers();
   $object->output = geoPHP::getAdapterMap();
   return $object;
-}
-
-function geocoder_services_handlers() {
-  $handlers = array();
-  foreach (geocoder_handler_info() as $hid => $handler) {
-    if (!isset($handler['safe']) || $handler['safe']) {
-      $handlers[$hid] = $handler['description'];
-    }
-  }
-  return $handlers;
 }
