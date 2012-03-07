@@ -75,8 +75,14 @@ function geocoder_services_geocode($handler, $data, $format = 'default') {
 
 function geocoder_services_capabilities() {
   geophp_load();
+  
+  $handlers = array();
+  foreach (geocoder_handler_info() as $hid => $handler) {
+    $handlers[$hid] = $handler['title'] . ' - ' . $handler['description'];
+  }
+  
   $object = new stdClass();
-  $object->handlers = geocoder_service_handlers();
+  $object->handlers = $handlers;
   $object->output = geoPHP::getAdapterMap();
   return $object;
 }

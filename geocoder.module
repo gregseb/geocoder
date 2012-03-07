@@ -82,7 +82,10 @@ function geocoder_handler_info($field_type = NULL) {
  */
 function geocoder_get_handler($handler_name) {
   $handlers = geocoder_handler_info();
-  return $handlers[$handler_name];
+  if (isset($handlers[$handler_name])) {
+    return $handlers[$handler_name];
+  }
+  else return FALSE;
 }
 
 /**
@@ -151,9 +154,9 @@ function geocoder_permission() {
       'title' => t('Can use all Geocoder handlers through AJAX / service'),
     ),
   );
-  foreach (geocoder_service_handlers() as $name => $desc) {
+  foreach ($handler_info as $name => $handler) {
     $perms['geocoder_service_handler_' . $name] = array(
-      'title' => t('Can geocode using @handler through AJAX / service', array('@handler' => $handler_info[$name]['title'])),
+      'title' => t('Can geocode using @handler through AJAX / service', array('@handler' => $handler['title'])),
     );
   }
   return $perms;
@@ -173,14 +176,14 @@ function geocoder_service_check_perms($handler) {
  * Page callback for AJAX / Geocoder service
  * 
  * This service can be accessed at /geocoder/service/<handler>
- * and takes the query-parameter "data". Optinally a "format"
- * paramater may also be passed. "format" corresponds to
+ * and takes the query-parameter "data". Optinally a "output"
+ * paramater may also be passed. "output" corresponds to
  * geoPHP output formats.
  * 
  * Some examples:
  * /geocoder/service/google?data=4925 Gair Ave, Terrace, BC
  * /geocoder/service/wkt?data=POINT(10 10)
- * /geocoder/service/yahoo?data=94112&format=wkt 
+ * /geocoder/service/yahoo?data=94112&output=wkt 
  */ 
 function geocoder_service_callback($handler) {
   if (!isset($_GET['data'])) {
@@ -188,7 +191,7 @@ function geocoder_service_callback($handler) {
     exit();
   }
   
-  $format = isset($_GET['format']) ?  $_GET['format'] : 'json';
+  $format = isset($_GET['output']) ?  $_GET['output'] : 'json';
   
   geophp_load();
   geocoder_service_check_request($handler, $format);
@@ -227,7 +230,7 @@ function geocoder_service_get_content_type($format) {
  * also checks permission
  */ 
 function geocoder_service_check_request($handler, $format, $check_ac = TRUE) {
-  if (!in_array($handler, array_keys(geocoder_service_handlers()))) {
+  if (!geocoder_get_handler($handler)) {
     drupal_set_message(t('Could not find handler @handler', array('@handler' => $handler)), 'error');
     drupal_not_found();
     exit();
@@ -240,21 +243,4 @@ function geocoder_service_check_request($handler, $format, $check_ac = TRUE) {
     drupal_access_denied();
     exit();
   }
-}
-
-/**
- * Geocoder Service Handlers
- * 
- * Get a list of all handlers that can be used via a service. 
- * This filters out "unsafe" handlers (such as exif). A hanlder can 
- * be marked as unsafe by settings "safe" => FALSE in it's definition.
- */ 
-function geocoder_service_handlers() {
-  $handlers = array();
-  foreach (geocoder_handler_info() as $hid => $handler) {
-    if (!isset($handler['safe']) || $handler['safe']) {
-      $handlers[$hid] = $handler['description'];
-    }
-  }
-  return $handlers;
 }
