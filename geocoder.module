@@ -14,11 +14,29 @@ include_once('geocoder.services.inc');
  *    geocoder('google','4925 Gair Ave, Terrace, BC');
  *    geocoder('google','New York City',array('geometry_type' => 'bounds'));
  */
-function geocoder($handler, $data, $options = array()) {
+function geocoder($handler, $data, $options = array(), $use_cache = TRUE, $cache_reset = FALSE) {
   ctools_include('plugins');
+  static $static_cache = array();
+  
+  if ($cache_reset) {
+    $static_cache = array();
+  }
+  
+  if ($use_cache) {
+    $cache_id = $handler . '_' . md5(serialize(array($data, $options)));
+    if (!empty($static_cache[$cache_id])) {
+      return $static_cache[$cache_id];
+    }
+  }
   
   $processor = ctools_get_plugins('geocoder', 'geocoder_handler', $handler);
-  return call_user_func($processor['callback'], $data, $options);
+  $geometry = call_user_func($processor['callback'], $data, $options);
+  
+  if ($use_cache) {
+    $static_cache[$cache_id] = $geometry;
+  }
+  
+  return $geometry;
 }
 
 
