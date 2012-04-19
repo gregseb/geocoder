@@ -347,3 +347,24 @@ function geocoder_widget_parse_addressfield($field_item) {
   
   return $address;
 }
+
+/**
+ * Geocoder Widget - Parse a location field
+ */
+function geocoder_widget_parse_locationfield($field_item) {
+  $address = '';
+  if (!empty($field_item['name']))        $address .= $field_item['name'] . ',';
+  if (!empty($field_item['street']))      $address .= $field_item['street'] . ',';
+  if (!empty($field_item['additional']))  $address .= $field_item['additional'] . ',';
+  if (!empty($field_item['city']))        $address .= $field_item['city'] . ',';
+  if (!empty($field_item['province']) && function_exists('location_province_name')) {
+    $province_fullname = location_province_name($field_item['country'], $field_item['province']);
+    $address .=  $province_fullname . ',';
+  }
+  if (!empty($field_item['country']))     $address .= $field_item['country'] . ',';
+  if (!empty($field_item['postal_code'])) $address .= $field_item['postal_code'] . ',';
+  
+  $address = rtrim($address, ', ');
+
+  return $address;
+}
