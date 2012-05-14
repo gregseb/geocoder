@@ -33,7 +33,6 @@ function geocoder_mapquest_nominatim($address, $options = array()) {
     'osm_type' => 'N',
   );
   $request = drupal_http_request($api_url . '?' . drupal_http_build_query($params));
-  dsm($request);
   $data = json_decode($request->data);
   return _geocoder_mapquest_nominatim_geometry($data);
 }
