@@ -194,14 +194,18 @@ function geocoder_field_attach_presave($entity_type, $entity) {
             }
           }
           
-          if (empty($geometries)) $values = array(NULL);
+          if (empty($geometries)) {
+            // This field has no data, so set the field to an empty array in
+            // order to delete its saved data.
+            $values = array(NULL);
+            $entity->{$field_instance['field_name']} = array();
+          }
           else {
             // Resolve multiple-values - get back values from our delta-resolver
             $values = geocoder_widget_resolve_deltas($geometries, $delta_handling, $target_type);
+            // Set the values - geofields do not support languages
+            $entity->{$field_instance['field_name']}[LANGUAGE_NONE] = $values;
           }
-          
-          // Set the values - geofields do not support languages
-          $entity->{$field_instance['field_name']}[LANGUAGE_NONE] = $values;
         }
       }
     }
