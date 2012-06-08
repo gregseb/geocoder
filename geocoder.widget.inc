@@ -156,6 +156,26 @@ function geocoder_field_attach_presave($entity_type, $entity) {
         $target_info = field_info_field($field_instance['field_name']);
         $target_type = $target_info['type'];
         
+        // For entities being updated, determine if another geocode is necessary
+        if (!empty($entity->original)) {
+          $changed = FALSE;
+          $field_original = field_get_items('node', $entity, $field_name, $entity->language);
+          $field_current = field_get_items('node', $entity->original, $field_name, $entity->language);
+          foreach ($field_current as $delta => $values) {
+            foreach ($values as $key => $value) {
+              // Check if the source field has changed
+              if (!empty($value) && $field_original[$delta][$key] != $value) {
+                $changed = TRUE;
+              }
+            }
+          }
+          // Geocode field should not be empty
+          $target = field_get_items('node', $entity, $target_info['field_name'], $entity->original->language);
+          if (!$changed && !empty($target)) { // No need to repeat a geocode request on the same source values.
+            return;
+          }
+        }
+        
         // Get the handler-specific-settings
         if (isset($field_instance['widget']['settings']['handler_settings'][$handler['name']])) {
           $handler_settings = $field_instance['widget']['settings']['handler_settings'][$handler['name']];
