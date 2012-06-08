@@ -345,7 +345,8 @@ function geocoder_widget_parse_addressfield($field_item) {
   if (!empty($field_item['administrative_area']))     $address .= $field_item['administrative_area'] . ',';
   if (!empty($field_item['sub_administrative_area'])) $address .= $field_item['sub_administrative_area'] . ',';
   if (!empty($field_item['country']))                 $address .= $field_item['country'] . ',';
-  
+  if (!empty($field_item['postal_code']))             $address .= $field_item['postal_code'] . ',';
+    
   $address = rtrim($address, ', ');
   
   return $address;
@@ -365,7 +366,8 @@ function geocoder_widget_parse_locationfield($field_item) {
     $address .=  $province_fullname . ',';
   }
   if (!empty($field_item['country']))     $address .= $field_item['country'] . ',';
-  
+  if (!empty($field_item['postal_code'])) $address .= $field_item['postal_code'] . ',';
+    
   $address = rtrim($address, ', ');
 
   return $address;
