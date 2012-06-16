@@ -231,7 +231,7 @@ function geocoder_widget_get_field_value($entity_type, $entity, $field_instance)
           }
         }
         catch (Exception $e) {
-          drupal_set_message($e->getMessage(), 'error');
+          trigger_error('Geocoding Error: ' . $e->getMessage(), E_WARNING);
         }
       }
       
