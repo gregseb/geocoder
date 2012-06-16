@@ -162,6 +162,12 @@ function geocoder_field_attach_presave($entity_type, $entity) {
 
 /**
  * Get a field's value based on geocoded data.
+ * 
+ * @return
+ *  Three possibilities could be returned by this function:
+ *    - FALSE: do nothing.
+ *    - An empty array: use it to unset the existing field value.
+ *    - A populated array: assign a new field value.
  */
 function geocoder_widget_get_field_value($entity_type, $entity, $field_instance) {
   // Required settings
