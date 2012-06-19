@@ -154,7 +154,7 @@ function geocoder_field_attach_presave($entity_type, $entity) {
   $bundle_name = empty($entity_info['entity keys']['bundle']) ? $entity_type : $entity->{$entity_info['entity keys']['bundle']};
   foreach (field_info_instances($entity_type, $bundle_name) as $field_instance) {
     if ($field_instance['widget']['type'] === 'geocoder') {
-      if (($field_value = geocoder_widget_get_field_value($entity_type, $entity, $field_instance)) !== FALSE) {
+      if (($field_value = geocoder_widget_get_field_value($entity_type, $field_instance, $entity)) !== FALSE) {
         $entity->{$field_instance['field_name']} = $field_value;
       }
     }
@@ -164,13 +164,27 @@ function geocoder_field_attach_presave($entity_type, $entity) {
 /**
  * Get a field's value based on geocoded data.
  * 
+ * @param $entity_type
+ *   Type of entity
+ * @para field_instance
+ *   Field instance definition array
+ * @param $entity
+ *  Optionally, the entity. You must pass either the entity or $source_field_values
+ * @param $source_field_values
+ *  Array of deltas / source field values. You must pass either this or $entity.
+ * 
  * @return
  *  Three possibilities could be returned by this function:
  *    - FALSE: do nothing.
  *    - An empty array: use it to unset the existing field value.
  *    - A populated array: assign a new field value.
  */
-function geocoder_widget_get_field_value($entity_type, $entity, $field_instance) {
+function geocoder_widget_get_field_value($entity_type, $field_instance, $entity = NULL, $source_field_values = NULL) {
+  if (!$source_field_values && !$entity) {
+    trigger_error('geocoder_widget_get_field_value: You must pass either $source_field_values OR $entity', E_WARNING);
+    return FALSE;
+  }
+  
   // Required settings
   if (isset($field_instance['widget']['settings']['geocoder_handler']) && isset($field_instance['widget']['settings']['geocoder_field'])) {
     $handler = geocoder_get_handler($field_instance['widget']['settings']['geocoder_handler']);
@@ -178,23 +192,39 @@ function geocoder_widget_get_field_value($entity_type, $entity, $field_instance)
     $target_info = field_info_field($field_instance['field_name']);
     $target_type = $target_info['type'];
     
-    // For entities being updated, determine if another geocode is necessary
-    if (!empty($entity->original)) {
-      $changed = FALSE;
-      $field_original = field_get_items('node', $entity, $field_name, $entity->language);
-      $field_current = field_get_items('node', $entity->original, $field_name, $entity->language);
-      foreach ($field_current as $delta => $values) {
-        foreach ($values as $key => $value) {
-          // Check if the source field has changed
-          if (!empty($value) && $field_original[$delta][$key] != $value) {
-            $changed = TRUE;
-          }
-        }
+    // Determine the source type, if it's a entity-key, we mock it as a "text" field
+    if (in_array($field_name, $entity_info['entity keys']) && $entity) {
+      $field_info = array('type' => 'text', 'entity_key' => TRUE);
+    }
+    else {
+      $field_info = field_info_field($field_name);
+      $field_info['entity_key'] = FALSE;
+    }
+    
+    // Get the source values
+    if (!$source_field_values) {
+      if ($field_info['entity_key'] && $entity) {
+        $source_field_values = array(array('value') => $entity->$field_name);
       }
-      // Geocode field should not be empty
-      $target = field_get_items('node', $entity, $target_info['field_name'], $entity->original->language);
-      if (!$changed && !empty($target)) { // No need to repeat a geocode request on the same source values.
+      else if ($entity) {
+        $source_field_values = field_get_items($entity_type, $entity, $field_name, $entity->language);
+      }
+      else {
+        // We can't find the source values
         return FALSE;
+      }
+    }
+    
+    // For entities being updated, determine if another geocode is necessary
+    if ($entity) {
+      if (!empty($entity->original)) {
+        //@@TODO: Deal with entity-properties (non-fields)
+        //@@TODO: This isn't working with file fields. Should use some kind of lookup / map
+        $field_original = field_get_items($entity_type, $entity->original, $field_name, $entity->language);
+        $diff = geocoder_widget_array_recursive_diff($field_original, $source_field_values);
+        if (empty($diff)) {
+          return FALSE;
+        }
       }
     }
     
@@ -211,14 +241,17 @@ function geocoder_widget_get_field_value($entity_type, $entity, $field_instance)
       $delta_handling = $field_instance['widget']['settings']['delta_handling'];
     }
     
-    list($field_info, $items) = geocoder_widget_get_field_data($entity_type, $entity, $field_name, $delta_handling);
+    // Check to see if we should be concatenating
+    if ($delta_handling == 'c_to_s' || $delta_handling == 'c_to_m') {
+      $source_field_values = geocoder_widget_get_field_concat($source_field_values);
+    }
     
-    if (is_array($items) && count($items)) {
+    if (is_array($source_field_values) && count($source_field_values)) {
       $values = array();
       
       // Geocode geometries
       $geometries = array();
-      foreach ($items as $delta => $item) {
+      foreach ($source_field_values as $delta => $item) {
         // Geocode any value from our source field.
         try {
           if (isset($handler_settings)) {
@@ -245,6 +278,7 @@ function geocoder_widget_get_field_value($entity_type, $entity, $field_instance)
       else {
         // Resolve multiple-values - get back values from our delta-resolver
         $values = geocoder_widget_resolve_deltas($geometries, $delta_handling, $target_type);
+        
         // Set the values - geofields do not support languages
         return array(LANGUAGE_NONE => $values);
       }
@@ -260,47 +294,15 @@ function geocoder_widget_get_field_value($entity_type, $entity, $field_instance)
  * that we need to do for the special case of entity-labels and multi-field contactenation
  * For these two special cases we "mock-up" a text-field and pass it back for geocoding
  */
-function geocoder_widget_get_field_data($entity_type, $entity, $field_name, $delta_handling) {
-  $entity_info = entity_get_info($entity_type);
-  
-  // First check to see if it's an entity field
-  if (in_array($field_name, $entity_info['entity keys'])) {
-    $items[]['value'] = $entity->$field_name;
-    $field_info = array(
-      'type' => 'text',
-      'entity key' => TRUE,
-    );
-  }
-  else {
-    // It's a normal field-api field
-    $field_info = field_info_field($field_name);
-    $langcode = field_language($entity_type, $entity, $field_name);
-    $items = field_get_items($entity_type, $entity, $field_name, $langcode);
-  }
-  
+function geocoder_widget_get_field_concat($items) {
   // Check if we should concatenate
-  if ($delta_handling == 'c_to_s' || $delta_handling == 'c_to_m') {
-    $support_concat = array('text', 'text_long', 'computed', 'text_with_summary', 'computed');
-    if (!in_array($field_info['type'], $support_concat)) {
-      drupal_set_message(t('Trying to concatenate a non-text field'));
-      return;
-    }
-    $concat = '';
-    foreach ($items as $item) {
-      $concat .= trim($item['value']) . ', ';
-    }
-    $concat = trim($concat, ', ');
-    $items = array(array('value' => $concat));
-    $field_info = array(
-      'type' => 'text',
-      'concated' => TRUE,
-    );
+  $concat = '';
+  foreach ($items as $item) {
+    $concat .= trim($item['value']) . ', ';
   }
-  
-  return array(
-    $field_info,
-    $items, 
-  );
+  $concat = trim($concat, ', ');
+  $items = array(array('value' => $concat));
+  return $items;
 }
 
 /**
@@ -412,3 +414,24 @@ function geocoder_widget_parse_locationfield($field_item) {
 
   return $address;
 }
+
+
+function geocoder_widget_array_recursive_diff($aArray1, $aArray2) {
+  $aReturn = array();
+
+  foreach ($aArray1 as $mKey => $mValue) {
+    if (array_key_exists($mKey, $aArray2)) {
+      if (is_array($mValue)) {
+        $aRecursiveDiff = geocoder_widget_array_recursive_diff($mValue, $aArray2[$mKey]);
+        if (count($aRecursiveDiff)) { $aReturn[$mKey] = $aRecursiveDiff; }
+      } else {
+        if ($mValue != $aArray2[$mKey]) {
+          $aReturn[$mKey] = $mValue;
+        }
+      }
+    } else {
+      $aReturn[$mKey] = $mValue;
+    }
+  }
+  return $aReturn;
+} 
