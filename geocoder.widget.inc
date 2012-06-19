@@ -135,6 +135,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#required' => TRUE,
   );
   
+  // Add javascript to sync allowed values. Note that we are not using AJAX because we do not have access to the raw form_state here
   drupal_add_js(array('geocoder_widget_settings' => array('handlers' => $handlers_by_type, 'types' => $field_types)), 'setting');
   drupal_add_js(drupal_get_path('module', 'geocoder') . '/geocoder.admin.js', 'file');
   
