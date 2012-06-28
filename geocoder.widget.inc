@@ -184,7 +184,9 @@ function geocoder_widget_get_field_value($entity_type, $field_instance, $entity 
     trigger_error('geocoder_widget_get_field_value: You must pass either $source_field_values OR $entity', E_WARNING);
     return FALSE;
   }
-  
+
+  $entity_info = entity_get_info($entity_type);
+
   // Required settings
   if (isset($field_instance['widget']['settings']['geocoder_handler']) && isset($field_instance['widget']['settings']['geocoder_field'])) {
     $handler = geocoder_get_handler($field_instance['widget']['settings']['geocoder_handler']);
