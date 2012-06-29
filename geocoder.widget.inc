@@ -74,7 +74,6 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     '#options' => $valid_fields,
     '#description' => t('Select which field you would like to geocode from.'),
     '#required' => TRUE,
-    '#attributes' => array('onchange' => 'geocoder_admin_field_selected();'),
   );
   
   $form['geocoder_handler'] = array(
