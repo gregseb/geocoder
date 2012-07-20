@@ -23,8 +23,17 @@ $plugin = array(
  * Process Address
  */
 function geocoder_yandex($address, $options = array()) {
-  $geocoder_settings = variable_get("geocoder_settings",array());
-  $consumer_key = $geocoder_settings["geocoder_apikey_yandex"];
+  global $base_path;
+  $geocoder_settings = variable_get("geocoder_settings", array());
+
+  if (!empty($geocoder_settings["geocoder_apikey_yandex"])) {
+    $consumer_key = $geocoder_settings["geocoder_apikey_yandex"];
+  }
+  else {
+    drupal_set_message("You must set up your Yandex API key. Click <a href='$base_path/admin/config/content/geocoder'>here</a>",'error');
+    return;
+  }
+
   $params = array (
     'format' => 'json',
     'results' => 1,
