@@ -143,7 +143,7 @@ function geocoder_google_form($default_values = array()) {
   $form['all_results'] = array(
     '#type' => 'checkbox',
     '#title' => 'Geocode all alternative results',
-    '#default_value' => isset($default_values['all_values']) ? $default_values['all_values'] : FALSE,
+    '#default_value' => isset($default_values['all_results']) ? $default_values['all_results'] : FALSE,
     '#description' => 'Often an ambiguous address (such as "Springfield USA") can result in multiple hits. By default we only return the first (best guess) result. Check this to return all results as a Multi-Geometry (MultiPoint or MultiPolygon).', 
   );
   
