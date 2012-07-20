@@ -264,9 +264,14 @@ function geocoder_widget_get_field_value($entity_type, $field_instance, $entity 
           if ($geometry instanceof Geometry) {
             $geometries[] = $geometry;
           }
+          else {
+            // An error occured
+            return FALSE;
+          }
         }
         catch (Exception $e) {
           watchdog_exception('geocoder', $e);
+          return FALSE;
         }
       }
       
