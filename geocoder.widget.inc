@@ -328,7 +328,7 @@ function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default'
   }
   
   // Single-to-multiple handling - if we can, explode out the component geometries
-  if ($delta_handling == 's_to_m' || $delta_handling = 'c_to_m') {
+  if ($delta_handling == 's_to_m' || $delta_handling == 'c_to_m') {
     $type = $geometries[0]->geometryType();
     if (in_array($type, array('MultiPoint', 'MultiLineString', 'MultiPolygon', 'GeometryCollection'))) {
       $components = $geometries[0]->getComponents();
@@ -342,7 +342,7 @@ function geocoder_widget_resolve_deltas($geometries, $delta_handling = 'default'
   }
   
   // For multiple-to-single handling, run it though geometryReduce
-   if ($delta_handling == 'm_to_s' || $delta_handling = 'c_to_s') {
+   if ($delta_handling == 'm_to_s' || $delta_handling == 'c_to_s') {
     $reduced_geom = geoPHP::geometryReduce($geometries);
     $values[] = geocoder_widget_values_from_geometry($reduced_geom, $field_type);
   }
