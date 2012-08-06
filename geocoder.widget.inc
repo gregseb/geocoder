@@ -216,6 +216,19 @@ function geocoder_widget_get_field_value($entity_type, $field_instance, $entity 
       }
     }
     
+    // Remove source values that are not valid.
+    if ($source_field_values) {
+      foreach ($source_field_values as $delta => $item) {
+        if (!is_numeric($delta)) {
+          unset($source_field_values[$delta]);
+        }
+      }
+    }
+    // If no valid source values were passed.
+    if (empty($source_field_values)) {
+      return FALSE;
+    }
+
     // For entities being updated, determine if another geocode is necessary
     if ($entity) {
       if (!empty($entity->original)) {
