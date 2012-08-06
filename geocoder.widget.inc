@@ -205,7 +205,7 @@ function geocoder_widget_get_field_value($entity_type, $field_instance, $entity 
     // Get the source values
     if (!$source_field_values) {
       if ($field_info['entity_key'] && $entity) {
-        $source_field_values = array(array('value') => $entity->$field_name);
+        $source_field_values = array(array('value' => $entity->$field_name));
       }
       else if ($entity) {
         $source_field_values = field_get_items($entity_type, $entity, $field_name, $entity->language);
