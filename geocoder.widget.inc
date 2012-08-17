@@ -382,7 +382,7 @@ function geocoder_widget_values_from_geometry($geometry, $field_type) {
       'lat' => $lat,
       'lng' => $lng,
       'lat_sin' => sin(deg2rad($lat)),
-      'lat_cos' => cos(deg2rad($lng)),
+      'lat_cos' => cos(deg2rad($lat)),
       'lng_rad' => deg2rad($lng),
     );
   }
