@@ -235,9 +235,11 @@ function geocoder_widget_get_field_value($entity_type, $field_instance, $entity 
         //@@TODO: Deal with entity-properties (non-fields)
         //@@TODO: This isn't working with file fields. Should use some kind of lookup / map
         $field_original = field_get_items($entity_type, $entity->original, $field_name, $entity->language);
-        $diff = geocoder_widget_array_recursive_diff($field_original, $source_field_values);
-        if (empty($diff)) {
-          return FALSE;
+        if (!empty($field_original)) {
+          $diff = geocoder_widget_array_recursive_diff($field_original, $source_field_values);
+          if (empty($diff)) {
+            return FALSE;
+          }
         }
       }
     }
@@ -437,7 +439,9 @@ function geocoder_widget_parse_locationfield($field_item) {
 
 function geocoder_widget_array_recursive_diff($aArray1, $aArray2) {
   $aReturn = array();
-
+  if (empty($aArray1)) {
+    return $aReturn;
+  }
   foreach ($aArray1 as $mKey => $mValue) {
     if (array_key_exists($mKey, $aArray2)) {
       if (is_array($mValue)) {
