@@ -10,12 +10,16 @@ function geocoder_drush_command() {
   $items['geocoder-backfill'] = array(
     'callback' => 'geocoder_drush_backfill',
     'description' => "Geocodes all nodes that have a geocoder widget but no geodata.",
+    'options' => array(
+      'force' => 'Force the geocode to run, even if there is already geodata', 
+    ),
   );
   
   return $items;
 }
 
 function geocoder_drush_backfill() {
+  $force_reload = drush_get_option('force');
   $all_entity_info = entity_get_info();
   foreach ($all_entity_info as $entity_type => $entity_info) {
     if ($entity_type == 'node') { //TODO: FIX THE LOGIC BELOW and implement for all entities
@@ -36,15 +40,19 @@ function geocoder_drush_backfill() {
                 $langcode = field_language($entity_type, $entity, $field_name);
                 $items = field_get_items($entity_type, $entity, $field_name, $langcode);
                 
+                if ($force_reload) {
+                  $entity->original = array();
+                }
+                
                 // Check for values and if there are no values, reload the entity
                 if ($field_info['type'] == 'geofield') {
-                  if (empty($items['wkt'])) node_save($entity); //TODO: fix for all entities
+                  if ($force_reload || (empty($items['wkt']) && empty($items['geom']))) node_save($entity); //TODO: fix for all entities
                 }
                 if ($field_info['type'] == 'location') {
-                  if (empty($items['latitude'])) node_save($entity); //TODO: fix for all entities
+                  if ($force_reload || empty($items['latitude'])) node_save($entity); //TODO: fix for all entities
                 }
                 if ($field_info['type'] == 'geolocation') {
-                  if (empty($items['lat'])) node_save($entity); //TODO: fix for all entities
+                  if ($force_reload || empty($items['lat'])) node_save($entity); //TODO: fix for all entities
                 }
               }
             }
