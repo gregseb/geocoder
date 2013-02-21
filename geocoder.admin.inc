@@ -10,6 +10,19 @@
  */
 function geocoder_admin_settings($form, &$form_state) {
   $geocoder_settings= variable_get("geocoder_settings", array());
+
+  include_once(drupal_get_path('module', 'geocoder') . '/geocoder.drush.inc');
+  $form['geocoder_backfill'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Maintenance'),
+  );
+
+  $form['geocoder_backfill']['backfill'] = array(
+    '#type' => 'submit',
+    '#value' => t('Recalculate all geocoded values'),
+    '#submit' => array('geocoder_drush_backfill'),
+  );
+
   $form['geocoder_apikey_yahoo'] = array(
     '#type' => 'textfield',
     '#title' => t('Yahoo PlaceFinder API Key'),
