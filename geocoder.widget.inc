@@ -67,12 +67,22 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     }
   }
 
-  dpm($settings);
+  // Prepare an array of weights for settings later
+  $weights = array_flip(range(0 - count($valid_fields), count($valid_fields)));
+  foreach ($weights as $key => $value) {
+    $weights[$key] = $key;
+  }
+
+  // Group sourcefields into a single place in the settings array.
+  $form['geocode_sources'] = array(
+    '#tree' => TRUE,
+  );
+
   foreach ($valid_fields as $field_type => $field_name) {
-    $form['geocoder_' . $field_type] = array(
+    $form['geocode_sources'][$field_type]['enabled'] = array(
       '#type' => 'checkbox',
       '#title' => t($field_name),
-      '#default_value' => isset($settings['geocoder_' . $field_type]) ? $settings['geocoder_' . $field_type] : '',
+      '#default_value' => isset($settings['geocode_sources'][$field_type]['enabled']) ? $settings['geocode_sources'][$field_type]['enabled'] : '',
     );
 
     $handlers = array_flip(array_unique($handlers_by_type[$field_types[$field_type]]));
@@ -80,41 +90,40 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
       $handlers[$key] = $key;
     }
 
-    $form['geocoder_' . $field_type . '_settings'] = array(
+    $form['geocode_sources'][$field_type]['settings'] = array(
       '#type' => 'fieldset',
       '#title' => t($field_name . ' Geocoder Settings'),
       '#states' => array(
         'visible' => array(
-          ':input[id="edit-instance-widget-settings-geocoder-' . str_replace('_', '-', $field_type) . '"]' => array('checked' => TRUE),
+          ':input[id="edit-instance-widget-settings-geocode-sources-' . str_replace('_', '-', $field_type) . '-enabled"]' => array('checked' => TRUE),
         ),
       ),
       '#tree' => TRUE,
     );
 
-    $form['geocoder_' . $field_type . '_settings']['handler'] = array(
+    $form['geocode_sources'][$field_type]['settings']['handler'] = array(
       '#type' => 'select',
       '#title' => t('Geocoder'),
-      '#default_value' => isset($settings['geocoder_' . $field_type . '_settings']['handler']) ? $settings['geocoder_' . $field_type . '_settings']['handler'] : '',
+      '#default_value' => isset($settings['geocode_sources'][$field_type]['settings']['handler']) ? $settings['geocode_sources'][$field_type]['settings']['handler'] : '',
       '#options' => $handlers,
     );
 
     // Add the handler settings forms
     foreach ($processors as $handler_id => $handler) {
       if (isset($handler['settings_callback']) || isset($handler['terms_of_service'])) {
-        $default_values = isset($settings['geocoder_' . $field_type . '_settings'][$handler_id]) ? $settings['geocoder_' . $field_type . '_settings'][$handler_id] : array();
-        $form['geocoder_' . $field_type . '_settings'][$handler_id] = array();
-        $form['geocoder_' . $field_type . '_settings'][$handler_id]['#type'] = 'fieldset';
-        $form['geocoder_' . $field_type . '_settings'][$handler_id]['#attributes'] = array('class' => array('geocoder-handler-setting', 'geocoder-handler-setting-' . $handler_id));
-        $form['geocoder_' . $field_type . '_settings'][$handler_id]['#title'] = $handler['title'] . ' Settings';
-        $form['geocoder_' . $field_type . '_settings'][$handler_id]['#states'] = array(
+        $default_values = isset($settings['geocode_sources'][$field_type]['settings'][$handler_id]) ? $settings['geocode_sources'][$field_type]['settings'][$handler_id] : array();
+        $form['geocode_sources'][$field_type]['settings'][$handler_id] = array();
+        $form['geocode_sources'][$field_type]['settings'][$handler_id]['#type'] = 'fieldset';
+        $form['geocode_sources'][$field_type]['settings'][$handler_id]['#attributes'] = array('class' => array('geocoder-handler-setting', 'geocoder-handler-setting-' . $handler_id));
+        $form['geocode_sources'][$field_type]['settings'][$handler_id]['#title'] = $handler['title'] . ' Settings';
+        $form['geocode_sources'][$field_type]['settings'][$handler_id]['#states'] = array(
           'visible' => array(
-            //':input[id="edit-instance-widget-settings-geocoder-' . str_replace('_', '-', $field_type) . '-handler"]' => array('value' => $handler_id),
-            ':input[id="edit-instance-widget-settings-geocoder-' . str_replace('_', '-', $field_type) . '-settings-handler"]' => array('value' => $handler_id),
+            ':input[id="edit-instance-widget-settings-geocode-sources-' . str_replace('_', '-', $field_type) . '-settings-handler"]' => array('value' => $handler_id),
           ),
         );
 
         if (isset($handler['terms_of_service'])) {
-          $form['geocoder_' . $field_type . '_settings'][$handler_id]['tos'] = array(
+          $form['geocode_sources'][$field_type]['settings'][$handler_id]['tos'] = array(
             '#type' => 'item',
             '#markup' => t('This handler has terms of service. Click the following link to learn more.') . ' ' . l($handler['terms_of_service'], $handler['terms_of_service']),
           );
@@ -122,16 +131,16 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
 
         if (isset($handler['settings_callback'])) {
           $settings_callback = $handler['settings_callback'];
-          $form['geocoder_' . $field_type . '_settings'][$handler_id] = array_merge($form['geocoder_' . $field_type . '_settings'][$handler_id], $settings_callback($default_values));
+          $form['geocode_sources'][$field_type]['settings'][$handler_id] = array_merge($form['geocode_sources'][$field_type]['settings'][$handler_id], $settings_callback($default_values));
         }
       }
     }
 
-    $form['geocoder_' . $field_type . '_settings']['delta_handling'] = array(
+    $form['geocode_sources'][$field_type]['settings']['delta_handling'] = array(
       '#type' => 'select',
       '#title' => t('Multi-value input handling'),
       '#description' => t('Should geometries from multiple inputs be: <ul><li>Matched with each input (e.g. One POINT for each address field)</li><li>Aggregated into a single MULTIPOINT geofield (e.g. One MULTIPOINT polygon from multiple address fields)</li><li>Broken up into multiple geometries (e.g. One MULTIPOINT to multiple POINTs.)</li></ul>'),
-      '#default_value' => isset($settings['geocoder_' . $field_type . '_settings']['delta_handling']) ? $settings['geocoder_' . $field_type . '_settings']['delta_handling']: 'default',
+      '#default_value' => isset($settings['geocode_sources'][$field_type]['settings']['delta_handling']) ? $settings['geocode_sources'][$field_type]['settings']['delta_handling']: 'default',
       '#options' => array(
         'default' => 'Match Multiples (default)',
         'm_to_s' =>  'Multiple to Single',
@@ -140,13 +149,33 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
         'c_to_m' =>  'Concatenate to Multiple',
       ),
     );
+
+    $form['geocode_sources'][$field_type]['settings']['weight'] = array(
+      '#type' => 'select',
+      '#title' => t('Weight'),
+      '#description' => t('If you select "Cascade" for multiple source field handling then fields with a smaller weight will be geocoded first.'),
+      '#default_value' => isset($settings['geocode_sources'][$field_type]['settings']['weight']) ? $settings['geocode_sources'][$field_type]['settings']['weight'] : 0,
+      '#options' => $weights,
+    );
   }
 
-  /* Remove this block along with the js it points to?  This syncing is no longer needed since each field gets its own set of options from the beginning.
-  // Add javascript to sync allowed values. Note that we are not using AJAX because we do not have access to the raw form_state here
-  //drupal_add_js(array('geocoder_widget_settings' => array('handlers' => $handlers_by_type, 'types' => $field_types)), 'setting');
-  //drupal_add_js(drupal_get_path('module', 'geocoder') . '/geocoder.admin.js', 'file');
-  */
+  $form['multisource_handling'] = array(
+    '#type' => 'select',
+    '#title' => t('Multiple source fields handling'),
+    '#description' => t('How should geocoder handle multiple fields?
+<ul>
+<li>Select (Select which field to geocode from a select list.)</li>
+<li>Cascade (Try each field until one successfully geocodes.)</li>
+<li>Merge (Geocode all fields and merge the results into a collection.)</li>
+</ul>
+Ignore this setting if you have only selected a single source field.'),
+    '#default_value' => isset($settings['multisource_handling']) ? $settings['multisource_handling']: 'default',
+    '#options' => array(
+      'default' => 'Select (default)',
+      'cascade' => 'Cascade',
+      'merge' => 'Merge',
+    ),
+  );
 
   return $form;
 }
