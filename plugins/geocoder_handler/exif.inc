@@ -19,7 +19,7 @@ function geocoder_exif($url, $options = array()) {
       return FALSE;
     }
   }
-  
+
   // The user has permission to access the file. Geocode it.
   geophp_load();
   if ($data = exif_read_data($url)) {

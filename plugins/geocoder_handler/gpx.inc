@@ -1,5 +1,4 @@
-<?php // $Id: gpx.inc,v 1.1 2009/03/02 18:14:07 vauxia Exp $
-
+<?php
 
 /**
  * @file
