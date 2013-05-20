@@ -265,6 +265,9 @@ function geocoder_widget_get_field_value($entity_type, $field_instance, $entity 
       $source_field_values = geocoder_widget_get_field_concat($source_field_values);
     }
 
+    // Allow other modules to alter values before we geocode them.
+    drupal_alter('geocoder_geocode_values', $source_field_values, $field_info,  $handler_settings);
+
     if (is_array($source_field_values) && count($source_field_values)) {
       $values = array();
 
