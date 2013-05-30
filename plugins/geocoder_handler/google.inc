@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -141,7 +140,7 @@ function geocoder_google_field($field, $field_item, $options = array()) {
 
 function geocoder_google_form($default_values = array()) {
   $form = array();
-  
+
   $form['geometry_type'] = array(
     '#type' => 'select',
     '#title' => 'Geometry Type',
@@ -150,16 +149,16 @@ function geocoder_google_form($default_values = array()) {
       'bounds' => 'Bounding Box',
       'viewport' => 'Viewport',
     ),
-    '#default_value' => isset($default_values['geometry_type']) ? $default_values['geometry_type'] : 'point', 
+    '#default_value' => isset($default_values['geometry_type']) ? $default_values['geometry_type'] : 'point',
   );
 
   $form['all_results'] = array(
     '#type' => 'checkbox',
     '#title' => 'Geocode all alternative results',
     '#default_value' => isset($default_values['all_results']) ? $default_values['all_results'] : FALSE,
-    '#description' => 'Often an ambiguous address (such as "Springfield USA") can result in multiple hits. By default we only return the first (best guess) result. Check this to return all results as a Multi-Geometry (MultiPoint or MultiPolygon).', 
+    '#description' => 'Often an ambiguous address (such as "Springfield USA") can result in multiple hits. By default we only return the first (best guess) result. Check this to return all results as a Multi-Geometry (MultiPoint or MultiPolygon).',
   );
-  
+
   $form['reject_results'] = array(
     '#type' => 'checkboxes',
     '#title' => 'Reject Results',
@@ -172,6 +171,6 @@ function geocoder_google_form($default_values = array()) {
     '#default_value' => isset($default_values['reject_results']) ? $default_values['reject_results'] : array(),
     '#description' => 'Reject results that do not meet a certain level of quality or precision. Check all types of results to reject.',
   );
-  
+
   return $form;
 }
