@@ -104,7 +104,7 @@ function geocoder_field_widget_settings_form($this_field, $instance) {
     $form['geocode_sources'][$field_id]['settings']['geocoder_handler'] = array(
       '#type' => 'select',
       '#title' => t('Geocoder'),
-      '#default_value' => isset($settings['geocode_sources'][$field_id]['settings']['geocoder_handler']) ? $settings['geocoder_sources'][$field_id]['settings']['geocoder_handler'] : '',
+      '#default_value' => isset($settings['geocode_sources'][$field_id]['settings']['geocoder_handler']) ? $settings['geocode_sources'][$field_id]['settings']['geocoder_handler'] : '',
       '#options' => $handlers,
     );
 
@@ -189,13 +189,93 @@ function geocoder_field_attach_presave($entity_type, $entity) {
   $entity_info = entity_get_info($entity_type);
   $bundle_name = empty($entity_info['entity keys']['bundle']) ? $entity_type : $entity->{$entity_info['entity keys']['bundle']};
   foreach (field_info_instances($entity_type, $bundle_name) as $field_instance) {
-    if ($field_instance['widget']['type'] === 'geocoder') {
-      if (($field_value = geocoder_widget_get_field_value($entity_type, $field_instance, $entity)) !== FALSE) {
+    if ($field_instance['widget']['type'] === 'geocoder' && isset($field_instance['widget']['settings']['geocode_sources'])) {
+      //if (($field_value = geocoder_widget_get_field_value($entity_type, $field_instance, $entity)) !== FALSE) {
+      if (($field_value = geocoder_widget_get_geofield_value($entity_type, $field_instance, $entity)) !== FALSE) {
         $entity->{$field_instance['field_name']} = $field_value;
       }
       else {
         $entity->{$field_instance['field_name']} = array();
       }
+    }
+  }
+}
+
+/**
+ * Loop through enabled source fields and produce a value for our geofield.
+ */
+function geocoder_widget_get_geofield_value($entity_type, $field_instance, $entity = NULL, $source_field_values = NULL) {
+  $settings = $field_instance['widget']['settings'];
+  $sources_sorted = array();
+  $source_values = array();
+
+  // Order enabled sources by weight...
+  foreach ($settings['geocode_sources'] as $field_name => $source) {
+    if ($source['enabled']) {
+      $weight = $source['settings']['weight'];
+
+      // If desired sorted spot is taken increment until a free spot is found.
+      if (!isset($sources_sorted[$weight])) {
+        $sources_sorted[$weight] = $source;
+        $sources_sorted[$weight]['settings']['geocoder_field'] = $field_name;
+      } else {
+        while (isset($sources_sorted[$weight])) {
+          $weight++;
+        }
+
+        $sources_sorted[$weight] = $source;
+        $sources_sorted[$weight]['settings']['geocoder_field'] = $field_name;
+      }
+    }
+  }
+  ksort($sources_sorted);
+
+  foreach ($sources_sorted as $source) {
+    if ($source['enabled']) {
+      $source_settings = array(
+        'widget' => array(
+          'settings' => array(
+            'geocoder_handler' => $source['settings']['geocoder_handler'],
+            'geocoder_field' => $source['settings']['geocoder_field'],
+            'delta_handling' => $source['settings']['delta_handling'],
+          ),
+        ),
+        'field_name' => $field_instance['field_name'],
+      );
+      if (isset($source['settings'][$source['settings']['geocoder_handler']])) {
+        $source_settings['widget']['settings']['handler_settings'][$source['settings']['geocoder_handler']] = $source['settings'][$source['settings']['geocoder_handler']];
+      }
+
+      $field_value = geocoder_widget_get_field_value($entity_type, $source_settings, $entity);
+      if ($field_value) {
+        $source_values[] = $field_value;
+      }
+    }
+  }
+
+  if ($source_values) {
+    switch ($settings['multisource_handling']) {
+      case 'cascade':
+        return $source_values[0];
+        break;
+      case 'merge_s':
+        // merge into a single valued field.
+        // @todo Need to somehow gracefully handle different types of geocoder fields, also the possibility that we might have to deal with multi-values.
+        $geoms = array();
+        foreach ($source_values as $value) {
+          $geoms[] = geoPHP::load($value[LANGUAGE_NONE][0]['wkt']);
+        }
+        $reduced = geoPHP::geometryReduce($geoms);
+        return array(LANGUAGE_NONE => array(0 => array('wkt' => $reduced->out('wkt'))));
+        break;
+      case 'merge_m':
+        // Merge deltas under a single LANGUAGE_NONE
+        $values = array();
+        foreach ($source_values as $value) {
+          $values = array_merge($values, $value[LANGUAGE_NONE]);
+        }
+        return array(LANGUAGE_NONE => $values);
+        break;
     }
   }
 }
