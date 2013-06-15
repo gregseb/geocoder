@@ -34,6 +34,14 @@ function geocoder_admin_settings($form, &$form_state) {
     '#required' => FALSE,
   );
 
+  $form['geocoder_google_delay'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Delay between Google geocoding requests (in milliseconds)'),
+    '#description' => t('Adds a delay between geocoding requests, to avoid OVER_QUERY_LIMIT errors from Google. 200ms is recommended.'),
+    '#default_value' => variable_get('geocoder_google_delay', 0),
+    '#size' => 10,
+  );
+
   $form['#submit'][] = 'geocoder_admin_settings_submit';
   return system_settings_form($form);
 }
