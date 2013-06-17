@@ -14,6 +14,7 @@ $plugin = array(
   'description' => t('Get the geometry out of a KML string, file, or URL'),
   'callback' => 'geocoder_kml',
   'field_types' => array('text', 'text_long', 'file', 'computed'),
+  'mime_type' => 'application/vnd.google-earth.kml+xml',
   'field_callback' => 'geocoder_kml_field',
 );
 

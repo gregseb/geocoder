@@ -17,6 +17,7 @@ $plugin = array(
   'description' => t('Get the geometry of a GPX string or file'),
   'callback' => 'geocoder_gpx',
   'field_types' => array('text', 'text_long', 'file', 'computed'),
+  'mime_type' => 'application/gpx+xml',
   'field_callback' => 'geocoder_gpx_field',
 );
 
@@ -40,4 +41,3 @@ function geocoder_gpx_field($field, $field_item) {
     }
   }
 }
-

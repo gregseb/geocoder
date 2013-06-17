@@ -14,6 +14,7 @@ $plugin = array(
   'description' => t('Get the geometry of a GeoJSON string, file, or URL'),
   'callback' => 'geocoder_json',
   'field_types' => array('text', 'text_long', 'file', 'computed'),
+  'mime_type' => 'application/json',
   'field_callback' => 'geocoder_json_field',
 );
 

@@ -14,6 +14,7 @@ $plugin = array(
   'description' => t('Get the geometry of a WKT string'),
   'callback' => 'geocoder_wkt',
   'field_types' => array('text', 'text_long', 'file', 'geofield', 'computed'),
+  'mime_type' => 'application/wkt',
   'field_callback' => 'geocoder_wkt_field',
 );
 

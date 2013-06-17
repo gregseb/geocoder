@@ -5,6 +5,7 @@ $plugin = array(
   'description' => t('Get a location from an image that was taken with a GPS enabled phone or camera'),
   'callback' => 'geocoder_exif',
   'field_types' => array('file', 'image'),
+  'mime_type' => 'image/',
   'field_callback' => 'geocoder_exif_field',
 );
 
